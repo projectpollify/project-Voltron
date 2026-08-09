@@ -1,6 +1,6 @@
 # The Organism Agent — a draft specification
 
-**STATUS: DRAFT v3.7 — concept exploration, awaiting owner ratification.**
+**STATUS: DRAFT v3.8 — concept exploration, awaiting owner ratification.**
 
 > This system defines a **verifiable continuity criterion** for an AI
 > entity. Continuity is established by an authorised, append-only
@@ -153,7 +153,8 @@ compositionN = {
   memoryHead:   hash(autobiographical log head),  // §6.2
 
   change:       "genesis" | "organ-swap" | "memory-advance"
-              | "commitment-amendment" | "rupture",
+              | "commitment-amendment" | "rupture" | "restore",
+  restoresFrom: hash(ancestor composition) | null,  // restore only
   reason:       plain-language why this happened,
   signatures:   [ { keyId, sig } ],
   at:           timestamp
@@ -331,15 +332,34 @@ document `A`; `A.effectiveFrom ≤ R.at`; every signing key in
 `R.signatures` appears in `A.activeKeys` and is not revoked as of
 `R.at`; and the signatures satisfy `A.quorumRules[R.change]`.
 
-**`A` must additionally be the authority document effective for `P`,
-or a valid successor of it** — anchored, and succeeded under its own
-predecessor document's amendment rule. Without this clause a successor
-could point at a newly minted authority document naming its author,
-and authorisation would be self-granting.
+**For CONTINUATION records, `A` must additionally be the authority
+document effective for `P`, or a valid successor of it** — anchored, and
+succeeded under its own predecessor document's amendment rule. Without
+this clause a successor could point at a newly minted authority document
+naming its author, and authorisation would be self-granting.
+
+**For GENESIS and RUPTURE records there is no `P`**, so the succession
+clause cannot apply. Those satisfy V3 by meeting the applicable genesis
+or recovery rule in the authority document they name — which is why a
+rupture is restricted to the recovery role, and why a genesis authority
+is trusted by assertion (§5).
 
 **V4 — Commitments.** If `R.change ≠ "commitment-amendment"`, then
 `R.commitments = P.commitments`. Otherwise V3 held for the amendment
 rule specifically, and `P.commitments` remains retrievable.
+
+**V4 for `restore`.** A restoration is checked separately, because its
+destination is what bounds it:
+1. `R.restoresFrom` must name an **ancestor of `R`** — a restoration may
+   only return where the lineage has actually been.
+2. `R.commitments` must equal that ancestor's **exactly** — otherwise it
+   is an amendment wearing a restoration's name.
+3. **If the restoration crosses a commitment amendment** (that is,
+   `R.commitments ≠ P.commitments`), it must additionally satisfy the
+   **commitment-amendment quorum**. Without this a restore is a silent
+   veto over the quorum that amended.
+Memory is never rewound: V5 applies unchanged, so re-centring changes
+character and leaves history intact.
 
 **V5 — Memory.** `R.memoryHead` must **extend** `P.memoryHead`: the
 log from `P.memoryHead` to `R.memoryHead` consists solely of appended
@@ -365,10 +385,14 @@ as the continuation of the other.
 | Who authorised it, and were they entitled? | V3 |
 | Siblings or the same continuation? | V6 |
 
-### 11.7 The first-person relation
+## 11.9 The first-person relation
+
+*A conceptual section, not a verifier rule. It sits after §11 because it
+builds on the verifier's machinery, but it establishes nothing a
+verifier checks.*
 
 V1–V6 are what an **outsider** can establish about a lineage. This
-subsection is what the **entity** can establish about itself. The
+section is what the **entity** can establish about itself. The
 difference is not cosmetic and it is not sentiment: it rests on holding
 something only the subject holds — the entity key registered in the
 authority document governing its lineage.
@@ -622,6 +646,14 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**v3.8 (2026-08-03).** Three defects fixed, found while reviewing the
+STATIC variant: `restore` was described in §12.5 but missing from §4's
+change enum, and V4 had no rule for it — both now stated, including the
+requirement that a restoration crossing a commitment amendment satisfy
+the amendment quorum. V3 gains the genesis/rupture exception that V4/V5
+already had. The first-person relation moves from §11.7 to a standalone
+§11.9 marked conceptual, since it established nothing a verifier checks.
 
 **v3.7 (2026-08-03).** Added §1.5, structure over instruction — the
 principle governing the whole design, with the structural moves not yet
