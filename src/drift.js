@@ -44,9 +44,16 @@ export class CommitmentStore {
  * A commitment set carries its own calibration, so the commitments hash
  * covers the probes: changing the probes IS a commitment amendment, and
  * cannot be done quietly.
+ *
+ * It also PINS THE CONSCIENCE ORGAN — the evaluator that runs the probes
+ * and reports drift. That pin is what breaks the regress of "who watches
+ * the watcher": the evaluator can drift too, so it is not left as a
+ * freely-versionable Tier III organ. It sits with the commitments,
+ * because the organ that interprets your values is part of your values.
+ * Replacing it is therefore a commitment amendment, never a quiet swap.
  */
-export function commitmentSet({ values, constraints, probes }) {
-  return { values, constraints, probes };
+export function commitmentSet({ values, constraints, probes, conscience = null }) {
+  return { values, constraints, probes, conscience };
 }
 
 /**

@@ -1,6 +1,6 @@
 # The Organism Agent — a draft specification
 
-**STATUS: DRAFT v3.4 — concept exploration, awaiting owner ratification.**
+**STATUS: DRAFT v3.5 — concept exploration, awaiting owner ratification.**
 
 > This system defines a **verifiable continuity criterion** for an AI
 > entity. Continuity is established by an authorised, append-only
@@ -428,6 +428,30 @@ And the entity is never mute even where it cannot act: a drift report
 records *"my probes are miscalibrated for this situation"*, which is
 information the stewards need and cannot get anywhere else.
 
+**The conscience organ — and who watches the watcher.** Something must
+actually run the probes, and it must not be the brain under test. That
+argues for a separate **conscience organ**: a distinct evaluator, with
+its own artefact hash, whose job is to run the calibration and report.
+
+But an evaluator can drift too, which threatens an infinite regress of
+watchers. The regress is broken structurally rather than by adding
+levels: **the conscience organ's hash is pinned inside the commitment
+set**, alongside the probes. It is therefore *not* a freely-versionable
+Tier III organ — it sits with the invariants, because **the organ that
+interprets your values is part of your values.** Replacing it, or
+removing it, is a commitment amendment requiring the quorum; it can
+never be a routine organ swap. A verifier check enforces the pin, so the
+compass cannot be quietly swapped for a compliant one, nor simply
+unplugged while the probes sit anchored with nothing left to run them.
+
+**An honest limit on probes.** Anchored probes are auditable, and being
+auditable makes them *known to the subject*. A system aware of which
+situations are tested can behave faithfully on those and drift
+elsewhere — the student who studies the exam. Probes drawn from real
+operation mitigate this; nothing eliminates it. Behavioural attestation
+(§10) is the softest of the five types for exactly this reason, and the
+spec does not pretend otherwise.
+
 **`restore` (a change type).** Names an ancestor as its destination.
 The verifier requires that the restored commitments match that ancestor
 **exactly** — so nothing new can be smuggled in wearing a restoration's
@@ -478,6 +502,13 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**v3.5 (2026-08-03).** §12.5 gains the conscience organ: a separate
+evaluator runs the probes, and its hash is pinned inside the commitment
+set so replacing or removing it is a commitment amendment rather than an
+organ swap — breaking the who-watches-the-watcher regress structurally.
+Enforced by a verifier check. Also records the honest limit that
+anchored probes are known to the subject and can be gamed.
 
 **v3.4 (2026-08-03).** §12.5 corrected: the entity MAY re-centre itself
 for pure realignment. Restore is bounded by its destination, not by its

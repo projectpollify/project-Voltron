@@ -24,7 +24,7 @@ export function isRoot(record) {
 }
 
 export function verifyRecord(ctx, digest) {
-  const { compositions, authorities, anchors, memory } = ctx;
+  const { compositions, authorities, anchors, memory, commitments: commitmentSets } = ctx;
   const checks = [];
   const record = compositions.get(digest);
 
@@ -160,6 +160,22 @@ export function verifyRecord(ctx, digest) {
     const extension = memory.verifyExtension(record.memoryHead, predecessor.memoryHead);
     if (!extension.ok) return fail("V5", extension.reason);
     pass("V5", `memory extended by ${extension.appended} entr${extension.appended === 1 ? "y" : "ies"}`);
+  }
+
+  // ------------------------------------------------------ V4b (pin)
+  // If the commitment set is resolvable and pins a conscience organ,
+  // the composition must actually be running that evaluator. Otherwise
+  // the drift compass could be silently unplugged — probes anchored,
+  // nothing left to run them.
+  const commitmentSet = commitmentSets?.get(record.commitments) ?? null;
+  if (commitmentSet?.conscience) {
+    if (record.organs.conscience !== commitmentSet.conscience) {
+      return fail(
+        "V4",
+        "the conscience organ does not match the one pinned in the commitments — the drift compass has been swapped or unplugged, which is a commitment amendment, not an organ swap"
+      );
+    }
+    pass("V4b", "conscience organ matches the one pinned in the commitments");
   }
 
   // ---------------------------------------------------------------- V6

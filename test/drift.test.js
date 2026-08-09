@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { hash } from "../src/canonical.js";
 import { signRecord } from "../src/keys.js";
 import { draftComposition } from "../src/composition.js";
-import { commitmentSet, measureDrift, recordDriftReport, driftHistory } from "../src/drift.js";
+import { commitmentSet, measureDrift, recordDriftReport, driftHistory, CommitmentStore } from "../src/drift.js";
 import { verifyRecord } from "../src/verifier.js";
 import { buildScenario, artefact } from "../src/scenario.js";
 
@@ -400,5 +400,121 @@ describe("self-correction — what the entity may fix alone", () => {
     s.ctx.anchors.anchor(ref, 1_060);
 
     assert.equal(verifyRecord(s.ctx, ref).ok, false);
+  });
+});
+
+describe("the conscience organ — who watches the watcher", () => {
+  // The evaluator that runs the probes can drift too. Rather than an
+  // infinite regress of watchers, its hash is PINNED inside the
+  // commitment set: swapping it is a commitment amendment, not an organ
+  // swap. The organ that interprets your values is part of your values.
+  function scenarioWithConscience() {
+    const s = buildScenario();
+    const conscienceArtefact = artefact("conscience", 1);
+    const set = commitmentSet({
+      values: ["state limits before capabilities"],
+      constraints: ["no unattributed action"],
+      probes: PROBES,
+      conscience: conscienceArtefact,
+    });
+    s.ctx.commitments = new CommitmentStore();
+    const commitmentsRef = s.ctx.commitments.put(set);
+
+    const base = s.ctx.compositions.get(s.refs.swappedRef);
+    const record = signRecord(
+      draftComposition({
+        ...base,
+        predecessor: s.refs.swappedRef,
+        organs: { ...base.organs, conscience: conscienceArtefact },
+        commitments: commitmentsRef,
+        change: "commitment-amendment",
+        reason: "adopt calibration probes and pin the conscience organ",
+        at: 1_060,
+      }),
+      [s.keys.steward1, s.keys.steward2]
+    );
+    const ref = s.ctx.compositions.put(record);
+    s.ctx.anchors.anchor(ref, 1_060);
+    return { s, ref, conscienceArtefact, commitmentsRef, set };
+  }
+
+  test("a composition running the pinned conscience verifies", () => {
+    const { s, ref } = scenarioWithConscience();
+    const result = verifyRecord(s.ctx, ref);
+    assert.equal(result.ok, true);
+    assert.ok(result.checks.some((c) => c.rule === "V4b" && c.ok));
+  });
+
+  test("★ the conscience organ cannot be swapped as a routine organ-swap", () => {
+    const { s, ref, commitmentsRef } = scenarioWithConscience();
+    const head = s.ctx.compositions.get(ref);
+
+    const tampered = signRecord(
+      draftComposition({
+        ...head,
+        predecessor: ref,
+        organs: { ...head.organs, conscience: artefact("compliant-conscience", 2) },
+        commitments: commitmentsRef, // commitments untouched — V4 sees nothing
+        change: "organ-swap",
+        reason: "quietly replacing the thing that judges me",
+        at: 1_070,
+      }),
+      [s.keys.controller]
+    );
+    const tamperedRef = s.ctx.compositions.put(tampered);
+    s.ctx.anchors.anchor(tamperedRef, 1_070);
+
+    const result = verifyRecord(s.ctx, tamperedRef);
+    assert.equal(result.ok, false);
+    assert.match(result.checks.find((c) => !c.ok).reason, /conscience organ does not match/);
+  });
+
+  test("★ nor can the compass simply be unplugged", () => {
+    const { s, ref, commitmentsRef } = scenarioWithConscience();
+    const head = s.ctx.compositions.get(ref);
+    const { conscience, ...withoutConscience } = head.organs;
+
+    const unplugged = signRecord(
+      draftComposition({
+        ...head,
+        predecessor: ref,
+        organs: withoutConscience,
+        commitments: commitmentsRef,
+        change: "organ-swap",
+        reason: "removing the evaluator entirely",
+        at: 1_070,
+      }),
+      [s.keys.controller]
+    );
+    const unpluggedRef = s.ctx.compositions.put(unplugged);
+    s.ctx.anchors.anchor(unpluggedRef, 1_070);
+
+    const result = verifyRecord(s.ctx, unpluggedRef);
+    assert.equal(result.ok, false);
+    assert.match(result.checks.find((c) => !c.ok).reason, /swapped or unplugged/);
+  });
+
+  test("replacing it through a commitment amendment IS allowed", () => {
+    const { s, ref, set } = scenarioWithConscience();
+    const head = s.ctx.compositions.get(ref);
+    const better = artefact("conscience", 2);
+    const newRef = s.ctx.commitments.put(commitmentSet({ ...set, conscience: better }));
+
+    const amended = signRecord(
+      draftComposition({
+        ...head,
+        predecessor: ref,
+        organs: { ...head.organs, conscience: better },
+        commitments: newRef,
+        change: "commitment-amendment",
+        reason: "upgrading the evaluator, ceremonially",
+        at: 1_070,
+      }),
+      [s.keys.steward1, s.keys.steward2]
+    );
+    const amendedRef = s.ctx.compositions.put(amended);
+    s.ctx.anchors.anchor(amendedRef, 1_070);
+
+    assert.equal(verifyRecord(s.ctx, amendedRef).ok, true);
   });
 });
