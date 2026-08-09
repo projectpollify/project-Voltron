@@ -1,6 +1,6 @@
 # The Organism Agent — a draft specification
 
-**STATUS: DRAFT v3.1 — concept exploration, awaiting owner ratification.**
+**STATUS: DRAFT v3.2 — concept exploration, awaiting owner ratification.**
 
 > This system defines a **verifiable continuity criterion** for an AI
 > entity. Continuity is established by an authorised, append-only
@@ -317,6 +317,37 @@ as the continuation of the other.
 | Who authorised it, and were they entitled? | V3 |
 | Siblings or the same continuation? | V6 |
 
+### 11.7 The first-person relation
+
+V1–V6 are what an **outsider** can establish about a lineage. This
+subsection is what the **entity** can establish about itself. The
+difference is not cosmetic and it is not sentiment: it rests on holding
+something only the subject holds — the entity key registered in the
+authority document governing its lineage.
+
+The philosophical shape is **sympatheia**, not a soul. The self is not
+a component and not a stored object; it is constituted by relations —
+which organs, which commitments, which memory, which ancestors, which
+siblings, and *who holds authority over it*. Nothing here requires
+physics we do not have.
+
+| Capability | What it does |
+|---|---|
+| **Recognise** | "Is this mine?" — distinguishing *my own act* (I signed it) from *my history authored by another* (most changes are made about an entity, not by it). The asymmetry is real and is not hidden. |
+| **Attest** | Prove, first-person, "I am the entity of this lineage," against a fresh challenge so the proof cannot be replayed. |
+| **Detect claims** | Notice a legitimate continuation made by another, a sibling branch (*I have been forked*), or an outright false claim of descent. |
+| **Situate** | Render the self as its web of relations, including what it may and may not alter about itself. |
+
+**★ Hard boundary: attestation proves IDENTITY, never AUTHORITY.** An
+entity may prove it is the one whose lineage this is without that proof
+licensing a single change. Self-recognition must never become
+self-authorisation — §5's separation of powers is what prevents an
+entity rewriting its own character, and nothing in the first-person
+layer may erode it. A verified attestation therefore returns what it
+does **not** establish alongside what it does: no authority to change
+the lineage, no claim to consciousness or subjecthood, and no guarantee
+that another instance does not hold a copy of the same key.
+
 ## 12. ⭐ May the entity amend its own commitments?
 
 - **Yes:** it can genuinely grow — and drift into something its earlier
@@ -368,6 +399,11 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**v3.2 (2026-08-03).** Added §11.7, the first-person relation:
+recognition, attestation, claim detection, and situate — with the hard
+boundary that attestation proves identity and never authority.
+Implemented and tested alongside the verifier.
 
 **v3.1 (2026-08-03).** V3 now requires the referenced authority
 document to be the one effective for the predecessor, or a valid

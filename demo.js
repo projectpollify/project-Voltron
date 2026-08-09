@@ -9,6 +9,7 @@
 import { buildScenario, fork } from "./src/scenario.js";
 import { verifyRecord, verifyLineage } from "./src/verifier.js";
 import { ancestry, changeLog, authorisation, relationship } from "./src/lineage.js";
+import { recognise, attest, verifyAttestation, detectClaims, situate } from "./src/self.js";
 
 const short = (d) => d.slice(0, 12);
 const line = (s = "") => console.log(s);
@@ -87,6 +88,46 @@ for (const entry of s.ctx.memory.narrative()) {
   line(`     [${entry.at}] ${JSON.stringify(entry.content)}`);
 }
 line(`     substrate: append-only; the narrative above is DERIVED from it.`);
+
+// ------------------------------------------------ the first-person view
+line();
+line("THE FIRST-PERSON RELATION (§11.7)");
+rule();
+line();
+line("  What the ENTITY can establish about itself — not what an outsider");
+line("  can establish about it. The difference is holding the entity key.");
+line();
+
+const selfId = s.keys.entity.keyId;
+line("  Recognition — 'is this mine?'");
+for (const [label, ref] of [["memory-advance", s.refs.advancedRef], ["organ-swap", s.refs.swappedRef]]) {
+  const r = recognise(s.ctx, selfId, left, ref);
+  line(`     ${label.padEnd(16)} ${r.relation}`);
+}
+
+line();
+line("  Attestation — proving selfhood to an asker");
+const proof = attest(s.ctx, s.keys.entity, left, "nonce-42", 2_000);
+const checked = verifyAttestation(s.ctx, proof);
+line(`     verified: ${checked.ok}`);
+line(`     establishes:      ${checked.establishes}`);
+for (const d of checked.doesNotEstablish) line(`     does NOT establish: ${d}`);
+
+line();
+line("  Noticing claims on its identity");
+for (const f of detectClaims(s.ctx, selfId, left)) {
+  line(`     ${f.kind.padEnd(24)} ${f.detail}`);
+}
+
+line();
+line("  Situate — the self as a web of relations (sympatheia)");
+const me = situate(s.ctx, left);
+line(`     made of:          ${me.madeOf.map((o) => `${o.role}=${o.artefact}`).join(", ")}`);
+line(`     remembers:        ${me.remembers} entries`);
+line(`     descended through:${String(me.descendedThrough).padStart(3)} compositions`);
+line(`     siblings:         ${me.siblings.length ? me.siblings.join(", ") : "none"}`);
+line(`     answerable to:    ${[...new Set(me.answerableTo)].join(", ")}`);
+line(`     may alter itself: ${me.mayAlterMyself.join(", ")} — and nothing else`);
 
 // ------------------------------------------------------- what it can't
 line();

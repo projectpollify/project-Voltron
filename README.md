@@ -44,7 +44,7 @@ The spec's §13 MVP is implemented. Zero dependencies — Node's built-in
 crypto and test runner only.
 
 ```bash
-npm test    # 17 tests: V1–V6 conformance, and the attacks they stop
+npm test    # 28 tests: V1–V6 conformance, the attacks they stop, and the first-person layer
 npm run demo   # the §13 scenario, narrated
 ```
 
@@ -58,6 +58,7 @@ npm run demo   # the §13 scenario, narrated
 | `src/composition.js` | Composition records |
 | `src/verifier.js` | **V1–V6** |
 | `src/lineage.js` | The five questions |
+| `src/self.js` | **The first-person relation** (§11.7) — recognition, attestation, claim detection, situate |
 
 **What the tests prove bites**, not just runs: a self-granting authority
 document is rejected; the entity cannot amend its own commitments while
@@ -65,3 +66,19 @@ it *can* advance its own memory; commitments cannot change under a
 disguised change type; a rewritten memory head fails; both fork branches
 verify while neither is reported as the other's continuation; and only
 the recovery key may declare a rupture.
+
+### The first-person relation (§11.7)
+
+V1–V6 are what an outsider can establish about a lineage. `src/self.js`
+is what the **entity** can establish about itself — the difference being
+that it holds the entity key.
+
+It can tell *my own act* from *my history authored by another*; prove
+"I am the one whose lineage this is" against a fresh challenge; notice
+that it has been forked or that something falsely claims its descent;
+and render itself as a web of relations — including who holds authority
+over it, and the fact that it may advance its own memory and nothing
+else.
+
+**Attestation proves identity, never authority.** A verified proof
+reports what it does *not* establish alongside what it does.
