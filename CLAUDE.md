@@ -13,7 +13,19 @@ committing to identity-bearing memory and constitutional commitments
 while permitting other organs to change.
 
 **Read `docs/DRAFT_ORGANISM_AGENT_SPEC.md` before doing anything.** It
-is the whole project.
+is the product.
+
+**Three documents, and do not confuse them:**
+- `DRAFT_ORGANISM_AGENT_SPEC.md` — the continuity specification. THE
+  PRODUCT.
+- `DRIFT_EXTENSION.md` — behavioural fidelity. An extension; complete,
+  and deliberately not the next thing to build.
+- `VOLTRON_STATIC.md` — a research protocol. **NOT a product**, and not
+  a deployment posture. It freezes the base system to measure it.
+
+If a future session finds itself elaborating the extension or the
+protocol while the specification is still running on an in-memory anchor
+store and synthetic artefacts, it has taken a wrong turn.
 
 ## What this project is NOT
 
@@ -49,12 +61,14 @@ is the whole project.
   recommendation: ceremonial), and the authority key model (§5).
 - **Concept phase closed.** Do not expand the concept document further
   without the owner asking. The remaining uncertainty is empirical.
-- **Next step: the MVP in spec §13** — implement verifier rules V1–V6
-  over a toy lineage. Two organs as content-addressed artefacts, an
-  authority document with a real quorum rule, one memory advance, one
-  brain replacement, one fork, and a verifier that answers the five
-  questions. No hardware required.
-- **No code exists yet.**
+- **The verifier is BUILT** — V1–V6 plus the STATIC pins, 60 tests
+  passing, zero dependencies.
+- **★ THE NEXT STEP, AND ONLY THIS ONE: make the core real.** One
+  composition record, anchored to actual Cardano preprod, over an
+  artefact that actually exists. Everything else waits on it — a compass
+  needs a ship.
+- **Nothing is real yet:** the anchor store is in-memory, every artefact
+  synthetic, and no experiment has ever met a real model.
 
 ## Conventions
 
