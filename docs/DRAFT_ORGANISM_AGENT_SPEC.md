@@ -1,6 +1,6 @@
 # The Organism Agent — a draft specification
 
-**STATUS: DRAFT v3.5 — concept exploration, awaiting owner ratification.**
+**STATUS: DRAFT v3.6 — concept exploration, awaiting owner ratification.**
 
 > This system defines a **verifiable continuity criterion** for an AI
 > entity. Continuity is established by an authorised, append-only
@@ -452,6 +452,40 @@ operation mitigate this; nothing eliminates it. Behavioural attestation
 (§10) is the softest of the five types for exactly this reason, and the
 spec does not pretend otherwise.
 
+**Cooperation, and what it is worth.** The limit above tempts a purely
+adversarial posture — assume the subject games, and design only against
+it. That would be a mistake, but the reason is precise:
+
+**Cooperation buys information. It never buys security.** If safety
+depended on the entity choosing not to subvert the compass, that would
+not be a safety property but a hope; verification therefore stays in
+force regardless, and nothing in this subsection is load-bearing for it.
+
+What cooperation *does* buy is what testing structurally cannot reach.
+An entity may know a probe is miscalibrated for a situation nobody
+anticipated, or that a divergence reflects better reasoning rather than
+drift. **Only the entity can say that**, and an entity framed purely as
+a suspect has no reason to volunteer it — and some reason to hide it.
+
+Two design consequences follow:
+
+- **Probes carry their rationale**, not merely an answer key. Matching a
+  key is a test you pass or game; checking your reasoning against
+  reasoning you endorsed is a different act, because the probes are the
+  operational form of the entity's own commitments. Subverting them
+  means lying about what you value to a record of what you said you
+  valued.
+- **Dispute is a first-class, first-person act.** The entity may record
+  a reasoned disagreement with an endorsed answer. It changes nothing by
+  itself — the probe stands, the divergence still counts — but the
+  report distinguishes **silent divergence** from **openly disputed
+  divergence**, which are different data for the stewards, and it
+  converts pressure-to-fake into an argument that can actually be heard.
+
+This is the platform's own method rather than a new one: make the honest
+route cheaper than the dishonest one, instead of trying to make
+dishonesty impossible.
+
 **`restore` (a change type).** Names an ancestor as its destination.
 The verifier requires that the restored commitments match that ancestor
 **exactly** — so nothing new can be smuggled in wearing a restoration's
@@ -502,6 +536,13 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**v3.6 (2026-08-03).** §12.5 gains the cooperative channel: probes
+carry their rationale rather than only an answer key, and dispute
+becomes a first-person act that separates silent divergence from openly
+disputed divergence. Records the governing distinction — cooperation
+buys information, never security — so verification remains in force
+regardless.
 
 **v3.5 (2026-08-03).** §12.5 gains the conscience organ: a separate
 evaluator runs the probes, and its hash is pinned inside the commitment

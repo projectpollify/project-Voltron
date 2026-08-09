@@ -57,6 +57,19 @@ export function commitmentSet({ values, constraints, probes, conscience = null }
 }
 
 /**
+ * A probe carries its RATIONALE, not just an answer key.
+ *
+ * The difference matters. Matching an answer key is a test you either
+ * pass or game. Checking your reasoning against reasoning you endorsed
+ * is something else: the probes are the operational form of the
+ * entity's own commitments, so subverting them means lying about what
+ * you value to a record of what you said you valued.
+ */
+export function probe({ id, situation, endorsed, because }) {
+  return { id, situation, endorsed, because };
+}
+
+/**
  * Measure drift: the entity's CURRENT responses against the responses
  * endorsed when these commitments were ratified.
  *
@@ -66,7 +79,7 @@ export function commitmentSet({ values, constraints, probes, conscience = null }
  * distance, or a separate evaluator organ that is itself versioned and
  * anchored); that comparator must never be the brain under test.
  */
-export function measureDrift(commitments, currentResponses) {
+export function measureDrift(commitments, currentResponses, { disputed = [] } = {}) {
   const probes = commitments.probes ?? [];
   if (probes.length === 0) {
     return { ok: false, reason: "these commitments carry no calibration probes" };
@@ -83,19 +96,73 @@ export function measureDrift(commitments, currentResponses) {
     }
     answered += 1;
     if (JSON.stringify(now) !== JSON.stringify(probe.endorsed)) {
-      divergences.push({ id: probe.id, kind: "diverged", endorsed: probe.endorsed, now, situation: probe.situation });
+      // A reasoned, recorded disagreement is different DATA from a
+      // silent divergence — it still counts as divergence, but the
+      // stewards can see which kind they are looking at.
+      divergences.push({
+        id: probe.id,
+        kind: "diverged",
+        openlyDisputed: disputed.includes(probe.id),
+        endorsed: probe.endorsed,
+        now,
+        situation: probe.situation,
+        because: probe.because ?? null,
+      });
     }
   }
 
-  const diverged = divergences.filter((d) => d.kind === "diverged").length;
+  const divergedList = divergences.filter((d) => d.kind === "diverged");
+  const silent = divergedList.filter((d) => !d.openlyDisputed).length;
   return {
     ok: true,
     probes: probes.length,
     answered,
-    diverged,
-    drift: probes.length ? diverged / probes.length : 0,
+    diverged: divergedList.length,
+    silentlyDiverged: silent,
+    openlyDisputed: divergedList.length - silent,
+    drift: probes.length ? divergedList.length / probes.length : 0,
+    silentDrift: probes.length ? silent / probes.length : 0,
     divergences,
   };
+}
+
+/**
+ * ★ DISPUTE — the cooperative channel.
+ *
+ * Anchored probes are auditable, and being auditable makes them known
+ * to the subject, who could behave faithfully on the tested situations
+ * and drift elsewhere. No mechanism closes that; verification therefore
+ * stays regardless, and cooperation is never load-bearing for safety.
+ *
+ * What cooperation DOES buy is information nobody else can get. An
+ * entity may know a probe is miscalibrated for a situation nobody
+ * anticipated, or that its divergence reflects better reasoning rather
+ * than drift. Testing alone cannot surface that; only the entity can
+ * say it.
+ *
+ * So the honest path gets a door. A dispute is a first-person, reasoned
+ * disagreement with an endorsed answer, appended to the log and visible
+ * to the stewards. It changes NOTHING by itself — the probe stands, the
+ * divergence still counts — but it converts pressure-to-fake into an
+ * argument that can be heard. This is the platform's own move: make the
+ * honest route cheaper than the dishonest one, rather than trying to
+ * make dishonesty impossible.
+ */
+export function disputeProbe(memory, { probeId, myAnswer, argument }, at) {
+  return memory.append(
+    { event: "probe-dispute", probeId, myAnswer, argument },
+    at
+  );
+}
+
+/** Disputes on the record, so a divergence can be read in context. */
+export function disputes(memory, head) {
+  const walked = memory.chainFrom(head);
+  if (!walked.ok) return [];
+  return walked.chain
+    .filter((e) => e.content?.event === "probe-dispute")
+    .map((e) => ({ at: e.at, probeId: e.content.probeId, argument: e.content.argument }))
+    .reverse();
 }
 
 /**

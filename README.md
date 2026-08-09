@@ -44,7 +44,7 @@ The spec's §13 MVP is implemented. Zero dependencies — Node's built-in
 crypto and test runner only.
 
 ```bash
-npm test    # 47 tests: V1–V6 conformance, the attacks they stop, and the first-person layer
+npm test    # 50 tests: V1–V6 conformance, the attacks they stop, and the first-person layer
 npm run demo   # the §13 scenario, narrated
 ```
 
