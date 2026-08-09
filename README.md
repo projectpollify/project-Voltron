@@ -37,3 +37,31 @@ anchored records, provable lineage, independent attestation — and
 Nothing crosses between them without the owner saying so.
 
 Origin is recorded in the AgoraNet queue, entries #35 and #36.
+
+## The verifier (built 2026-08-03)
+
+The spec's §13 MVP is implemented. Zero dependencies — Node's built-in
+crypto and test runner only.
+
+```bash
+npm test    # 17 tests: V1–V6 conformance, and the attacks they stop
+npm run demo   # the §13 scenario, narrated
+```
+
+| Module | Role |
+|---|---|
+| `src/canonical.js` | Deterministic serialisation and hashing |
+| `src/keys.js` | Ed25519 keys and signatures |
+| `src/anchor.js` | The anchor store — an interface, local for now; swapping in Cardano must not change the verifier |
+| `src/memory.js` | The append-only log, and the derived narrative view (§6.1) |
+| `src/authority.js` | Authority documents, quorum evaluation, and succession validation |
+| `src/composition.js` | Composition records |
+| `src/verifier.js` | **V1–V6** |
+| `src/lineage.js` | The five questions |
+
+**What the tests prove bites**, not just runs: a self-granting authority
+document is rejected; the entity cannot amend its own commitments while
+it *can* advance its own memory; commitments cannot change under a
+disguised change type; a rewritten memory head fails; both fork branches
+verify while neither is reported as the other's continuation; and only
+the recovery key may declare a rupture.

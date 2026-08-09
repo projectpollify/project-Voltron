@@ -1,0 +1,11 @@
+{
+  "name": "project-voltron",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Organism Agent — a verifiable continuity criterion for an AI entity.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "demo": "node demo.js"
+  }
+}
