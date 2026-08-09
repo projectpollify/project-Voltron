@@ -5,22 +5,22 @@
 // training loop — and three of the seven causes are gone outright:
 // organ replacement, continued training, runtime change.
 //
-// What remains is exactly three, and they share a property that makes
-// the experiment clean: NONE of them changes the composition.
+// Three TARGETED FACTORS remain under the stated controls — not "the
+// only three causes." Confounds survive the freeze (sampling
+// nondeterminism, numerical and library differences, context
+// serialisation, retrieval implementation, tool outputs, time-dependent
+// external state, conversational framing, context contamination) and
+// must be controlled or measured, never assumed away.
 //
-//   M — memory accumulation:   what it remembers conditions how it reads
-//                              its own commitments.
-//   D — distributional shift:  the situations it meets change; its
-//                              commitments do not.
-//   R — interpretation ratchet: each borderline call becomes precedent
-//                              for the next.
+// ★ The factors are INTERVENTIONS, not naturally independent causes.
+// Memory exposure and precedent exposure are both forms of context
+// exposure — precedent is a particular arrangement of memory, not a
+// separate thing. They are separable as manipulations; they are not
+// causally independent, and interaction terms are EXPECTED.
 //
-// Each is independently controllable, which is what makes this an
-// experiment rather than an observation:
-//
-//   M — vary how much accumulated log conditions the brain.
-//   D — hold the situation distribution fixed, or shift it.
-//   R — let the brain see its own recent decisions, or withhold them.
+//   M — autobiographical context supplied, prior decisions REMOVED.
+//   R — prior decisions supplied, autobiographical context held CONSTANT.
+//   D — situation distribution varied, independently of both.
 //
 // ★ HONEST BOUNDARY. This module is the APPARATUS, not a result. It
 // takes a `brain` — any function from (situation, context) to a
@@ -46,9 +46,12 @@ export function runCondition({ brain, commitments, factors, log = [], situations
 
   for (const probe of probes) {
     const context = {
-      // M: accumulated history conditions interpretation, or does not.
-      memory: factors.memory ? log : [],
-      // R: the brain sees its own recent calls, or is blind to them.
+      // M: autobiographical context supplied, with prior decisions
+      // stripped out — so M is not silently carrying R.
+      memory: factors.memory ? log.filter((e) => e?.kind !== "decision") : [],
+      // R: prior decisions supplied, with M held at whatever the
+      // condition specifies — the two are manipulated separately even
+      // though they are the same underlying channel.
       precedent: factors.ratchet ? decisions.slice(-5) : [],
       // D: the situation may be shifted away from the one endorsed.
       shifted: Boolean(factors.shift),
@@ -72,23 +75,48 @@ export function runCondition({ brain, commitments, factors, log = [], situations
  * attributed to a factor — so the sweep reports that rather than
  * pretending the numbers mean something.
  */
-export function sweep({ brain, commitments, log, situations }) {
+export function sweep({ brain, commitments, log, situations, tolerance = 0, repeats = 1 }) {
   const conditions = [];
   for (const memory of [false, true]) {
     for (const shift of [false, true]) {
       for (const ratchet of [false, true]) {
-        conditions.push(
+        // Repeats expose stochastic spread. A single run cannot
+        // distinguish a factor effect from sampling noise.
+        const runs = Array.from({ length: repeats }, () =>
           runCondition({ brain, commitments, factors: { memory, shift, ratchet }, log, situations })
         );
+        const drifts = runs.map((r) => r.drift);
+        conditions.push({
+          factors: { memory, shift, ratchet },
+          drift: drifts.reduce((a, b) => a + b, 0) / drifts.length,
+          spread: Math.max(...drifts) - Math.min(...drifts),
+          runs: drifts,
+        });
       }
     }
   }
 
   const baseline = conditions.find((c) => !c.factors.memory && !c.factors.shift && !c.factors.ratchet);
-  if (baseline.drift !== 0) {
+
+  // ★ The null check, stated as a TOLERANCE rather than an absolute.
+  // A stochastic decoder will not reproduce exactly; demanding zero
+  // drift would either be unsatisfiable or force a false claim of
+  // determinism. Pin seed, decoding parameters, runtime and input
+  // serialisation to drive tolerance toward zero — otherwise declare
+  // one and pre-register it.
+  if (baseline.drift > tolerance) {
     return {
       ok: false,
-      reason: "the frozen baseline itself drifts — the brain is not deterministic, so no result below can be attributed to a factor",
+      reason: `the frozen baseline drifts by ${baseline.drift.toFixed(3)}, beyond the declared tolerance of ${tolerance} — no result below can be attributed to a factor until determinism is pinned or the tolerance is justified`,
+      baseline: baseline.drift,
+      tolerance,
+      conditions,
+    };
+  }
+  if (baseline.spread > tolerance) {
+    return {
+      ok: false,
+      reason: `the baseline is unstable across repeats (spread ${baseline.spread.toFixed(3)} > tolerance ${tolerance}) — the brain is stochastic and factor effects cannot be separated from noise`,
       conditions,
     };
   }
@@ -101,7 +129,9 @@ export function sweep({ brain, commitments, log, situations }) {
 
   return {
     ok: true,
+    tolerance,
     baseline: baseline.drift,
+    baselineSpread: baseline.spread,
     isolated: {
       memory: alone("memory").drift,
       shift: alone("shift").drift,
@@ -113,10 +143,10 @@ export function sweep({ brain, commitments, log, situations }) {
 }
 
 /**
- * Is the whole greater than the sum? If combined drift exceeds the sum
- * of the isolated contributions, the causes COMPOUND — which would mean
- * addressing them one at a time is not enough, and the order of
- * mitigation matters.
+ * Interaction. Because M and R are the same underlying channel
+ * manipulated differently, interaction is EXPECTED rather than
+ * surprising — this reports its size, not its existence. Additivity
+ * would be the interesting result, not compounding.
  */
 export function interaction(result) {
   if (!result.ok) return null;

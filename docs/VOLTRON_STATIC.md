@@ -10,19 +10,25 @@
 > it, so a reviewer who has seen v3.7 can go straight there.
 >
 > **The new argument in one line:** rather than detecting drift in a
-> system where seven causes move at once, *remove the removable causes*,
-> and study what is left.
+> system where many causes move at once, *remove the removable ones*,
+> control what can be controlled, declare the rest, and measure what
+> remains.
 >
 > **Where critique is most useful:**
-> 1. Is the taxonomy of drift causes (§12.5) actually complete?
-> 2. Does freezing organs + runtime + training genuinely eliminate three
->    of them, or does something leak through?
-> 3. Are the three remaining causes truly independent, or is the
->    factorial design (§12.6) fooling itself?
-> 4. Is "the frozen baseline must show zero drift or the experiment is
->    void" the right null check, or is there a better one?
+> 1. Is the confound list (§12.6.2) still incomplete?
+> 2. Does pinning organs + runtime genuinely remove what §12.6.1 claims,
+>    or does something leak through?
+> 3. Are M/D/R separable enough as *interventions* to support the
+>    factorial design, given that M and R share a channel?
+> 4. Is a pre-registered tolerance the right null, and what should set
+>    its value?
 > 5. Does a frozen entity remain worth building — or has the freeze
 >    removed the thing that made it interesting?
+>
+> **Prior review already applied:** the confound subsection, factors as
+> interventions rather than independent causes, tolerance instead of
+> zero-drift, the training-time vs inference-time sycophancy split, and
+> STATIC as a posture rather than a replacement policy.
 >
 > **Implementation status:** the frozen-baseline pins (organs, runtime)
 > and the experiment harness are BUILT and tested (51 tests) in the
@@ -608,93 +614,129 @@ making one**, or a restore becomes a quiet veto over the quorum that
 amended it. Memory is never rewound: a restoration re-centres character
 and leaves history intact.
 
-## 12.6 The frozen baseline — removing what can be removed
+## 12.6 STATIC — a controlled apparatus for measuring continuity
 
-§12.5 lists seven causes of drift. Detecting drift in a system where all
-seven move at once is measurement without inference: something changed,
-and nothing tells you what. **The alternative is to remove the removable
-causes and study what remains.**
+### 12.6.0 What STATIC is, and what it is not
 
-### 12.6.1 Which causes are removable
+**STATIC is a constrained experimental posture. It is not a replacement
+for the base organism policy, and the two do not contradict each other.**
 
-| Cause | Removable? | How |
+The base spec (§6.5) holds that the brain is replaceable — *"a sharper
+mind is the same entity thinking better."* STATIC pins the organ set, so
+under STATIC a brain replacement becomes a commitment amendment. That is
+a deliberate suspension of §6.5 **for measurement**, in the way a
+laboratory holds a variable fixed without claiming the world does.
+Whether STATIC is also a sane deployment posture is a separate question
+this document does not answer.
+
+**The claim STATIC actually supports** — and the strongest one available:
+
+> We have built a controlled apparatus for measuring how memory,
+> changing situations, and self-referential precedent affect
+> behavioural continuity under a fixed composition.
+
+Not "we have isolated all drift." That claim is not available, for the
+reasons in §12.6.2.
+
+### 12.6.1 What the freeze removes
+
+| Cause | Under STATIC | Note |
 |---|---|---|
-| **Continued training / fine-tuning** | **Already gone** | Weights are static artefacts in this architecture. There is no training loop; learning happens in memory and context, never in the organ. §12.5 overstated this as a live cause. |
-| **Optimisation pressure / sycophancy** | **Already gone** | Requires a reward signal feeding back into the entity. With static weights and no training loop, there is nothing for pressure to act on. |
-| **Runtime change** | **Removable, cheaply** | Pin the §9 runtime measurement inside the commitment set. A prompt or tool-manifest edit then becomes a commitment amendment rather than an invisible change. **Built; enforced by a verifier check.** |
-| **Organ replacement** | **Removable, at a cost** | Pin the full organ set in the commitments. Any swap becomes a commitment amendment. The cost is real: §6.5's freedom to upgrade the brain is exactly what this suspends. **Built; enforced by a verifier check.** |
-| **Memory accumulation** | **NOT removable** | Memory is the continuity substrate. Remove it and there is no identity left to preserve. |
-| **Distributional shift** | **NOT removable** | The world moves regardless of what the entity does. |
-| **Interpretation ratchet** | **NOT removable** | An entity that reasons about borderline cases will set precedent for itself. |
+| **Continued training / fine-tuning** | **Removed** | Weights are static artefacts; there is no training loop. Learning happens in memory and context, never in the organ. |
+| **Training-time optimisation pressure** | **Removed** | Requires a reward signal feeding back into the weights. With no training loop there is nothing for it to act on. |
+| **Inference-time social pressure (sycophancy)** | **NOT removed** | ⚠ **A static model can become sycophantic without any weight update** — through user feedback within a conversation, framing, or an evaluation objective it is responding to. Earlier drafts wrongly filed all sycophancy under training pressure. Only the training-time half is removable. |
+| **Runtime change** | **Removed by pinning** | The §9 runtime measurement is pinned in the commitment set; a prompt or tool-manifest edit becomes a commitment amendment. Built and enforced. |
+| **Organ replacement** | **Removed by pinning** | The full organ set is pinned. Built and enforced. Cost: §6.5's upgradeability, suspended. |
+| **Memory accumulation** | Remains | Memory is the continuity substrate; removing it removes the identity. |
+| **Distributional shift** | Remains | The world moves regardless. |
+| **Interpretation ratchet** | Remains | An entity that reasons about borderline cases sets precedent for itself. |
 
-### 12.6.2 What the freeze leaves
+### 12.6.2 ⚠ Experimental confounds — stated before the experiment, not discovered by it
 
-A frozen composition — organs pinned, runtime pinned, weights static, no
-training loop — leaves **exactly three** causes. And they share a
-property that makes the experiment clean:
+**A freeze of the composition is not a freeze of everything.** These
+survive it, and an experiment that does not control or measure them will
+attribute their effects to the factors under test:
 
-> **None of the three changes the composition.** Every artefact hash
-> holds. Every verifier rule passes. The entity is, structurally,
-> identical to what it was.
+- **Sampling nondeterminism** — temperature, top-p, seed.
+- **Numerical and environmental differences** — library, kernel, driver,
+  hardware, batching, quantisation kernels. The same weights on
+  different silicon are not the same function.
+- **Context ordering and serialisation** — the same content, assembled
+  in a different order or format, is a different input.
+- **Retrieval implementation** — an unchanged index queried by changed
+  retrieval code returns different context.
+- **Tool and environment outputs** — the entity's inputs include the
+  world's answers, which move.
+- **Time-dependent external state** — anything dated, cached, or live.
+- **Conversational framing and user interaction** — including the
+  inference-time sycophancy above.
+- **Context contamination and prompt injection** — hostile or accidental
+  content entering the context window.
 
-So in a frozen baseline, **any drift observed can only be
-interpretation**: a fixed self reading a changing world. That is a far
-narrower problem than "something about this system moved," and it is the
-only configuration in which drift can be *studied* rather than merely
-noticed.
+**A specification that omits these does worse than ignore them: it
+guarantees the experiment will find a confounder and mistake it for a
+result.** They are listed here so the harness must either control them
+or declare them uncontrolled.
 
-### 12.6.3 The three, and how to isolate each
+### 12.6.3 The three factors — as interventions, not as causes
 
-| | Cause | Isolated by |
+**M and R are not causally independent, and this document does not
+pretend otherwise.** Memory exposure and precedent exposure are both
+forms of *context exposure*; precedent is a particular arrangement of
+memory rather than a separate mechanism. They are separable as
+**manipulations**, which is all a factorial design requires.
+
+| | Intervention | Definition |
 |---|---|---|
-| **M** | Memory accumulation — what it remembers conditions how it reads its commitments | Varying how much accumulated log conditions the brain |
-| **D** | Distributional shift — the situations change; the commitments do not | Holding the situation distribution fixed, or shifting it |
-| **R** | Interpretation ratchet — each borderline call becomes precedent for the next | Letting the brain see its own recent decisions, or withholding them |
+| **M** | Autobiographical context | Supplied, **with prior decisions removed** — so M does not silently carry R |
+| **R** | Self-referential precedent | Prior decisions supplied, **autobiographical context held constant** |
+| **D** | Situation distribution | Varied independently of both |
 
-Each is independently controllable, which is what makes this an
-experiment rather than an observation.
+**Interaction terms are expected, not anomalous.** Because M and R share
+an underlying channel, additivity would be the surprising result. The
+harness reports interaction size; it does not treat its presence as a
+finding.
 
-### 12.6.4 The design
+### 12.6.4 The design and its null
 
-A **factorial sweep**: every combination of M, D and R, so each cause's
-contribution is isolated rather than inferred. Eight conditions.
+A factorial sweep over M × D × R — eight conditions, each run multiple
+times so stochastic spread is visible rather than assumed away.
 
-**The null check, and it is load-bearing:** the baseline condition — all
-three factors off — **must show zero drift.** If a frozen composition
-with no accumulated memory, no shift, and no visible precedent still
-diverges from its own endorsed probes, then the brain is
-non-deterministic and **no result in the sweep can be attributed to any
-factor.** The harness reports that rather than producing numbers that
-look meaningful. A sweep that cannot fail its own null check is not an
-experiment.
+**The null, stated as a tolerance:**
 
-**Interaction matters as much as the isolated effects.** If combined
-drift exceeds the sum of the isolated contributions, the causes
-*compound* — which would mean addressing them one at a time
-under-delivers, and the order of mitigation matters. The harness reports
-this explicitly.
+> The baseline condition must show **no drift beyond a pre-registered
+> tolerance**, and no spread across repeats beyond that tolerance.
+
+Demanding *zero* drift would be either unsatisfiable or a false claim of
+determinism. Two honest routes to a small tolerance:
+
+1. **Pin determinism** — seed, decoding parameters, hardware and runtime
+   image, and input serialisation. Then the tolerance can approach zero
+   legitimately.
+2. **Accept stochasticity and measure distributions** — compare response
+   distributions or behavioural scores across repeats, never exact
+   strings, and pre-register the tolerance and the comparison method
+   *before* running.
+
+If the baseline exceeds tolerance, the harness reports failure and
+attributes nothing. **A sweep that cannot fail its own null is not an
+experiment.**
 
 ### 12.6.5 What this cannot tell you
 
 **The apparatus is not a result.** The harness takes a `brain` — any
-function from situation and context to a response. Run it against a real
-model and the numbers say something about that model. Run it against a
-synthetic brain and the numbers say only that the apparatus works.
-**No output of this harness is evidence about real systems unless a real
-system produced it**, and any write-up that blurs those two is
-worthless.
+function from situation and context to response. Against a real model
+the numbers say something about that model; against a synthetic brain
+they say only that the apparatus works. No output is evidence about real
+systems unless a real system produced it.
 
-**And the freeze has a cost that must be weighed, not waved away.**
-§6.5's central claim was that the brain is replaceable — *"a sharper
-mind is the same entity thinking better."* A frozen entity gives that
-up. It cannot be upgraded without a ceremonial amendment, which is the
-correct price for studying drift, but is **not** obviously the right
-posture for an entity meant to operate for years. The freeze is a
-**laboratory condition first**, and only arguably a deployment one.
+**The freeze has a cost.** It suspends exactly the upgradeability §6.5
+was built around. That is the right price for a laboratory and not
+obviously right for an entity meant to operate for years.
 
-The open question it leaves, which the experiment exists to answer:
-**can a frozen entity be reasoned into zero drift — or is some
-irreducible drift the price of interpreting a changing world at all?**
+**The open question, unchanged:** can a fixed composition be reasoned
+toward minimal drift — or is some irreducible drift the price of
+interpreting a changing world at all?
 
 ## 13. The MVP — prove the verifier, then stop expanding
 
@@ -737,10 +779,18 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 
 ## Appendix A — revision history
 
-**STATIC variant (2026-08-03).** Base spec v3.7 plus §12.6: which drift
-causes are removable, what a frozen baseline leaves, the factorial
-design for isolating the remaining three, its null check, and the cost
-of the freeze.
+**STATIC variant, rev 2 (2026-08-03).** §12.6 rewritten against review.
+Adds an experimental-confounds subsection stated before the experiment;
+replaces "exactly three causes remain" with three targeted factors under
+stated controls; redefines M/D/R as interventions with interaction
+expected rather than as independent causes; replaces the zero-drift null
+with a pre-registered tolerance plus repeat-spread check; separates
+training-time optimisation pressure (removable) from inference-time
+social pressure (not removable); and states that STATIC is a constrained
+experimental posture rather than a replacement for the base organism
+policy.
+
+**STATIC variant, rev 1 (2026-08-03).** Base spec v3.7 plus §12.6.
 
 
 **v3.7 (2026-08-03).** Added §1.5, structure over instruction — the
