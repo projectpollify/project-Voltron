@@ -293,3 +293,112 @@ describe("restore — re-centring, bounded", () => {
     assert.equal(result.checks.find((c) => !c.ok).rule, "V3");
   });
 });
+
+describe("self-correction — what the entity may fix alone", () => {
+  // The destination constraint, not the authority gate, is what makes
+  // restore safe: the target must be an ancestor and the commitments
+  // must match it exactly. An entity therefore CANNOT move itself
+  // anywhere it likes even with permission to restore — so withholding
+  // that permission buys nothing, and costs the ability to self-correct.
+  function entityMayRestore(s) {
+    s.ctx.authorities.get(s.refs.authorityRef).quorumRules.restore = {
+      threshold: 1,
+      roles: ["entity", "controller"],
+    };
+    return s;
+  }
+
+  test("★ the entity CAN re-centre itself when no commitments change", () => {
+    const s = entityMayRestore(buildScenario());
+    const head = s.ctx.compositions.get(s.refs.swappedRef);
+    const target = s.ctx.compositions.get(s.refs.genesisRef);
+
+    const record = signRecord(
+      draftComposition({
+        predecessor: s.refs.swappedRef,
+        restoresFrom: s.refs.genesisRef,
+        authorityRef: s.refs.authorityRef,
+        organs: target.organs, // roll the drifted brain back
+        runtime: head.runtime,
+        commitments: target.commitments, // identical — pure realignment
+        memoryHead: head.memoryHead,
+        change: "restore",
+        reason: "I measured drift against my own probes and re-centred",
+        at: 1_060,
+      }),
+      [s.keys.entity]
+    );
+    const ref = s.ctx.compositions.put(record);
+    s.ctx.anchors.anchor(ref, 1_060);
+
+    assert.equal(verifyRecord(s.ctx, ref).ok, true);
+  });
+
+  test("★ but it still cannot use restore to undo a steward amendment", () => {
+    // Pure realignment is bounded. Overturning someone else's
+    // constitutional decision is not realignment, and the bar holds.
+    const s = entityMayRestore(buildScenario());
+    const base = s.ctx.compositions.get(s.refs.swappedRef);
+
+    const amended = signRecord(
+      draftComposition({
+        ...base,
+        predecessor: s.refs.swappedRef,
+        commitments: hash({ values: ["amended by the stewards"] }),
+        change: "commitment-amendment",
+        reason: "ceremonial amendment",
+        at: 1_060,
+      }),
+      [s.keys.steward1, s.keys.steward2]
+    );
+    const amendedRef = s.ctx.compositions.put(amended);
+    s.ctx.anchors.anchor(amendedRef, 1_060);
+
+    const reverted = signRecord(
+      draftComposition({
+        predecessor: amendedRef,
+        restoresFrom: s.refs.swappedRef,
+        authorityRef: s.refs.authorityRef,
+        organs: base.organs,
+        runtime: base.runtime,
+        commitments: base.commitments,
+        memoryHead: base.memoryHead,
+        change: "restore",
+        reason: "I disagree with what they decided about me",
+        at: 1_070,
+      }),
+      [s.keys.entity]
+    );
+    const revertedRef = s.ctx.compositions.put(reverted);
+    s.ctx.anchors.anchor(revertedRef, 1_070);
+
+    const result = verifyRecord(s.ctx, revertedRef);
+    assert.equal(result.ok, false);
+    assert.match(result.checks.find((c) => !c.ok).reason, /amendment authority/);
+  });
+
+  test("★ and it cannot invent a destination, permission or not", () => {
+    const s = entityMayRestore(buildScenario());
+    const head = s.ctx.compositions.get(s.refs.swappedRef);
+
+    const record = signRecord(
+      draftComposition({
+        predecessor: s.refs.swappedRef,
+        restoresFrom: s.refs.genesisRef,
+        authorityRef: s.refs.authorityRef,
+        organs: head.organs,
+        runtime: head.runtime,
+        commitments: hash({ values: ["where I would rather be"] }),
+        memoryHead: head.memoryHead,
+        change: "restore",
+        reason: "calling my preference a restoration",
+        at: 1_060,
+      }),
+      [s.keys.entity]
+    );
+    const ref = s.ctx.compositions.put(record);
+    s.ctx.anchors.anchor(ref, 1_060);
+
+    assert.equal(verifyRecord(s.ctx, ref).ok, false);
+  });
+});

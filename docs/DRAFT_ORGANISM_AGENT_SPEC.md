@@ -1,6 +1,6 @@
 # The Organism Agent — a draft specification
 
-**STATUS: DRAFT v3.3 — concept exploration, awaiting owner ratification.**
+**STATUS: DRAFT v3.4 — concept exploration, awaiting owner ratification.**
 
 > This system defines a **verifiable continuity criterion** for an AI
 > entity. Continuity is established by an authorised, append-only
@@ -403,6 +403,31 @@ so something off-chain must actually run the probes.
 is an observation, appended to memory, and the entity may make it on its
 own key. Re-centring is a different act:
 
+**★ May the entity re-centre ITSELF?** Yes — and withholding it is the
+error, not the caution. What makes `restore` safe is **the destination
+constraint, not the authority gate**: the target must be an ancestor and
+the restored commitments must match it exactly, so an entity with full
+permission to restore still **cannot move itself anywhere it likes** —
+only back to where its own record already blesses. Gating pure
+realignment behind humans therefore buys nothing and costs the thing
+that matters most: the entity is the only party present continuously,
+and a drift that waits weeks for a quorum is a drift the entity operates
+inside the whole time.
+
+The line falls in a different place than "may it act at all":
+
+- **Pure realignment** — commitments unchanged, only organs rolled back
+  to an ancestor: **the entity may sign this alone.** It is correction,
+  not decision.
+- **Undoing a commitment amendment** — overturning what a quorum decided
+  about it: **not realignment, and the amendment bar holds.** An entity
+  that could revert its stewards by calling it a restoration would hold
+  a silent veto over its own constitution.
+
+And the entity is never mute even where it cannot act: a drift report
+records *"my probes are miscalibrated for this situation"*, which is
+information the stewards need and cannot get anywhere else.
+
 **`restore` (a change type).** Names an ancestor as its destination.
 The verifier requires that the restored commitments match that ancestor
 **exactly** — so nothing new can be smuggled in wearing a restoration's
@@ -453,6 +478,12 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**v3.4 (2026-08-03).** §12.5 corrected: the entity MAY re-centre itself
+for pure realignment. Restore is bounded by its destination, not by its
+authority gate, so withholding permission prevented self-correction
+without preventing anything dangerous. Undoing a commitment amendment
+remains barred.
 
 **v3.3 (2026-08-03).** Added §12.5, the drift compass: probes anchored
 inside the commitment set, mechanical measurement against a frozen
