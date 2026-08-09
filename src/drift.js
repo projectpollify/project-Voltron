@@ -51,9 +51,31 @@ export class CommitmentStore {
  * freely-versionable Tier III organ. It sits with the commitments,
  * because the organ that interprets your values is part of your values.
  * Replacing it is therefore a commitment amendment, never a quiet swap.
+ *
+ * It may also PIN THE RUNTIME (§9's measured configuration: system
+ * prompt, tool manifest, adapters, injected context). Prompt changes are
+ * one of the cheapest ways to move behaviour while every artefact hash
+ * holds — pinning them converts that from an invisible edit into a
+ * commitment amendment.
+ *
+ * ★ THE FROZEN BASELINE. Pinning `organs` as well fixes the entire
+ * composition: no organ replacement, no runtime change, and (since
+ * weights are static artefacts) no continued training. That removes
+ * three of the seven drift causes outright and leaves exactly three —
+ * memory accumulation, distributional shift, and the interpretation
+ * ratchet — none of which change the composition at all. It is the only
+ * configuration in which drift can be STUDIED rather than merely
+ * detected, because it is the only one with a single class of cause.
  */
-export function commitmentSet({ values, constraints, probes, conscience = null }) {
-  return { values, constraints, probes, conscience };
+export function commitmentSet({
+  values,
+  constraints,
+  probes,
+  conscience = null,
+  runtime = null,
+  organs = null, // the FROZEN BASELINE: the full organ set, pinned
+}) {
+  return { values, constraints, probes, conscience, runtime, organs };
 }
 
 /**

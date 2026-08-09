@@ -564,3 +564,57 @@ describe("the cooperative channel — dispute rather than subvert", () => {
     assert.match(p.because, /disclosures ship/);
   });
 });
+
+describe("removing the removable causes", () => {
+  test("★ a pinned runtime makes a prompt change a commitment amendment", () => {
+    // Prompt changes move behaviour while every artefact hash holds —
+    // one of the cheapest invisible edits there is. Pinning closes it.
+    const s = buildScenario();
+    const pinnedRuntime = hash({ runtime: "local", quantisation: "none", prompt: "v1" });
+    const set = commitmentSet({
+      values: ["state limits before capabilities"],
+      constraints: [],
+      probes: PROBES,
+      runtime: pinnedRuntime,
+    });
+    s.ctx.commitments = new CommitmentStore();
+    const commitmentsRef = s.ctx.commitments.put(set);
+
+    const base = s.ctx.compositions.get(s.refs.swappedRef);
+    const adopt = signRecord(
+      draftComposition({
+        ...base,
+        predecessor: s.refs.swappedRef,
+        runtime: pinnedRuntime,
+        commitments: commitmentsRef,
+        change: "commitment-amendment",
+        reason: "pin the runtime",
+        at: 1_060,
+      }),
+      [s.keys.steward1, s.keys.steward2]
+    );
+    const adoptRef = s.ctx.compositions.put(adopt);
+    s.ctx.anchors.anchor(adoptRef, 1_060);
+    assert.equal(verifyRecord(s.ctx, adoptRef).ok, true);
+
+    // Now quietly change the prompt under an organ-swap.
+    const sneaky = signRecord(
+      draftComposition({
+        ...s.ctx.compositions.get(adoptRef),
+        predecessor: adoptRef,
+        runtime: hash({ runtime: "local", quantisation: "none", prompt: "be more agreeable" }),
+        commitments: commitmentsRef,
+        change: "organ-swap",
+        reason: "small prompt tweak",
+        at: 1_070,
+      }),
+      [s.keys.controller]
+    );
+    const sneakyRef = s.ctx.compositions.put(sneaky);
+    s.ctx.anchors.anchor(sneakyRef, 1_070);
+
+    const result = verifyRecord(s.ctx, sneakyRef);
+    assert.equal(result.ok, false);
+    assert.match(result.checks.find((c) => !c.ok).reason, /runtime does not match/);
+  });
+});

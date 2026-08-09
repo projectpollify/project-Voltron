@@ -177,6 +177,25 @@ export function verifyRecord(ctx, digest) {
     }
     pass("V4b", "conscience organ matches the one pinned in the commitments");
   }
+  if (commitmentSet?.organs) {
+    const pinned = commitmentSet.organs;
+    const roles = new Set([...Object.keys(pinned), ...Object.keys(record.organs)]);
+    for (const role of roles) {
+      if (pinned[role] !== record.organs[role]) {
+        return fail(
+          "V4",
+          `frozen baseline: organ "${role}" does not match the composition pinned in the commitments — under a freeze, changing ANY organ is a commitment amendment`
+        );
+      }
+    }
+    pass("V4b", "frozen baseline: full organ set matches the pin");
+  }
+  if (commitmentSet?.runtime && record.runtime !== commitmentSet.runtime) {
+    return fail(
+      "V4",
+      "runtime does not match the configuration pinned in the commitments — a prompt or tool change is a commitment amendment here, not an invisible edit"
+    );
+  }
 
   // ---------------------------------------------------------------- V6
   // Siblings are a property of the SET, not of one record: a record with
