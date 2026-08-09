@@ -101,6 +101,47 @@ export function verifyRecord(ctx, digest) {
     const walked = memory.chainFrom(record.memoryHead);
     if (!walked.ok) return fail("V5", walked.reason);
     pass("V5", `root record: declared memory head (${walked.chain.length} entries)`);
+  } else if (record.change === "restore") {
+    // -------------------------------------------------- V4 (restore)
+    // Re-centring after drift. The destination must be an ANCESTOR that
+    // was already anchored and already authorised — so nothing new can
+    // be smuggled in under the name of a restoration.
+    const target = compositions.get(record.restoresFrom ?? "");
+    if (!target) return fail("V4", "restore names no target, or a target that is not present");
+
+    const line = new Set();
+    for (let c = record.predecessor; c; ) {
+      line.add(c);
+      const r = compositions.get(c);
+      if (!r || isRoot(r)) break;
+      c = r.predecessor;
+    }
+    if (!line.has(record.restoresFrom)) {
+      return fail("V4", "restore target is not an ancestor of this record — a restoration may only return to where this lineage has actually been");
+    }
+    if (record.commitments !== target.commitments) {
+      return fail("V4", "restored commitments do not match the target exactly — this is an amendment wearing a restoration's name");
+    }
+
+    // Reverting an amendment must clear the same bar as making one, or
+    // a restore becomes a veto over the quorum that amended it.
+    if (record.commitments !== predecessor.commitments) {
+      const amendmentBar = checkQuorum(
+        authority,
+        "commitment-amendment",
+        record.signatures,
+        signingHash(record),
+        record.at
+      );
+      if (!amendmentBar.ok) {
+        return fail("V4", `restoring past a commitment amendment needs the amendment authority: ${amendmentBar.reason}`);
+      }
+    }
+    pass("V4", `restored to ${record.restoresFrom.slice(0, 12)}`);
+
+    const extension = memory.verifyExtension(record.memoryHead, predecessor.memoryHead);
+    if (!extension.ok) return fail("V5", extension.reason);
+    pass("V5", "memory continues — a restoration re-centres character, never erases history");
   } else {
     // -------------------------------------------------------------- V4
     const changed = record.commitments !== predecessor.commitments;

@@ -32,6 +32,7 @@ export class CompositionStore {
 export function draftComposition({
   predecessor = null,
   priorLineage = null,
+  restoresFrom = null,
   authorityRef,
   organs,
   runtime,
@@ -44,6 +45,7 @@ export function draftComposition({
   return {
     predecessor,
     priorLineage,
+    restoresFrom,
     authorityRef,
     organs,
     runtime,

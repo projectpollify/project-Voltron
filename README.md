@@ -44,7 +44,7 @@ The spec's §13 MVP is implemented. Zero dependencies — Node's built-in
 crypto and test runner only.
 
 ```bash
-npm test    # 28 tests: V1–V6 conformance, the attacks they stop, and the first-person layer
+npm test    # 40 tests: V1–V6 conformance, the attacks they stop, and the first-person layer
 npm run demo   # the §13 scenario, narrated
 ```
 
@@ -59,6 +59,7 @@ npm run demo   # the §13 scenario, narrated
 | `src/verifier.js` | **V1–V6** |
 | `src/lineage.js` | The five questions |
 | `src/self.js` | **The first-person relation** (§11.7) — recognition, attestation, claim detection, situate |
+| `src/drift.js` | **The drift compass** (§12.5) — probes, measurement, drift reports |
 
 **What the tests prove bites**, not just runs: a self-granting authority
 document is rejected; the entity cannot amend its own commitments while
@@ -82,3 +83,23 @@ else.
 
 **Attestation proves identity, never authority.** A verified proof
 reports what it does *not* establish alongside what it does.
+
+### The drift compass (§12.5)
+
+V4 proves the *stated* commitments did not change. It cannot prove the
+entity still means them — the same words, read by a differently-tuned
+brain, can produce different behaviour, so an organ swap can be a silent
+commitment amendment.
+
+A commitment set therefore carries **probes**: situations paired with
+the responses endorsed when those commitments were ratified. Because the
+probes live inside the commitments, changing one *is* an amendment —
+the goalposts cannot move quietly. Drift is measured mechanically
+against that frozen reference, never by asking the brain under test.
+
+**Detection is first-person; correction is not.** A drift report is an
+observation the entity may make on its own key. Re-centring uses the
+`restore` change type, whose destination must be an ancestor, whose
+restored commitments must match it exactly, and which — when it undoes a
+commitment amendment — must clear the same authority bar that amendment
+did. Otherwise a restore is a quiet veto over the quorum.

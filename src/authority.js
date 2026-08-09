@@ -25,6 +25,7 @@ export const CHANGE_TYPES = [
   "memory-advance",
   "commitment-amendment",
   "rupture",
+  "restore",
   "authority-amendment",
 ];
 

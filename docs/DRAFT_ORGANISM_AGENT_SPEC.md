@@ -1,6 +1,6 @@
 # The Organism Agent — a draft specification
 
-**STATUS: DRAFT v3.2 — concept exploration, awaiting owner ratification.**
+**STATUS: DRAFT v3.3 — concept exploration, awaiting owner ratification.**
 
 > This system defines a **verifiable continuity criterion** for an AI
 > entity. Continuity is established by an authorised, append-only
@@ -359,6 +359,60 @@ that another instance does not hold a copy of the same key.
   *quiet* growth — and already the owner's answer to the identical
   problem in another domain.
 
+## 12.5 The drift compass
+
+**The problem this exists for.** §6.5 permits the brain to be replaced
+freely — "a sharper mind is the same entity thinking better" — and V4
+proves the stated commitments did not change. But commitments are
+*words*. The same words, read by a differently-tuned brain, can produce
+different behaviour. **An organ swap can therefore be a silent
+commitment amendment that V4 never sees: the hash holds while the
+character moves.** The verifier can prove the entity did not change what
+it says. It cannot prove the entity still means it.
+
+**The trap in self-correction.** An entity that checks its own drift
+using its current brain judges itself with the very disposition that
+drifted, and finds nothing wrong. A compass that consults the brain is a
+needle glued to the ship.
+
+**The mechanism.** The reference must be fixed *before* the drift and
+anchored with the commitments themselves. A commitment set therefore
+carries **probes**: situations paired with the responses the entity
+endorsed when those commitments were ratified. Because probes live
+inside the commitment set, the commitments hash covers them — **changing
+a probe is a commitment amendment** and needs the quorum. The goalposts
+cannot be moved quietly.
+
+Drift is then measured mechanically: current responses against frozen
+endorsed ones, with no judgement in the loop. (The comparator must never
+be the brain under test. A richer comparator than exact match is
+possible — an evaluator organ, itself versioned and anchored — but never
+the subject.)
+
+**What anchoring contributes, precisely.** The chain does not *detect*
+drift; it makes drift **undeniable** once measured. It renders the
+probes immutable, so today's behaviour can always be checked against
+answers endorsed before the drift; it carries drift reports (they append
+to the memory log, whose head is anchored in every record), so an
+unflattering report cannot be quietly deleted; and its ordering allows
+correlation — *drift appeared immediately after this organ swap*. What
+it cannot do is observe conduct: the chain sees hashes, never behaviour,
+so something off-chain must actually run the probes.
+
+**Detection may be first-person. Correction may not be.** A drift report
+is an observation, appended to memory, and the entity may make it on its
+own key. Re-centring is a different act:
+
+**`restore` (a change type).** Names an ancestor as its destination.
+The verifier requires that the restored commitments match that ancestor
+**exactly** — so nothing new can be smuggled in wearing a restoration's
+name — and that the target is genuinely an ancestor, so a restoration
+may only return where the lineage has actually been. Crucially,
+**restoring past a commitment amendment must clear the same bar as
+making one**, or a restore becomes a quiet veto over the quorum that
+amended it. Memory is never rewound: a restoration re-centres character
+and leaves history intact.
+
 ## 13. The MVP — prove the verifier, then stop expanding
 
 The remaining uncertainty is no longer philosophical. It is whether
@@ -399,6 +453,13 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**v3.3 (2026-08-03).** Added §12.5, the drift compass: probes anchored
+inside the commitment set, mechanical measurement against a frozen
+reference, drift reports as first-person observations, and the `restore`
+change type whose destination must be an ancestor and whose authority
+must match the amendment it undoes. Closes the gap where an organ swap
+could move behaviour while the commitments hash held.
 
 **v3.2 (2026-08-03).** Added §11.7, the first-person relation:
 recognition, attestation, claim detection, and situate — with the hard
