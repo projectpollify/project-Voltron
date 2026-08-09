@@ -1,6 +1,6 @@
 # The Organism Agent — a draft specification
 
-**STATUS: DRAFT v3.6 — concept exploration, awaiting owner ratification.**
+**STATUS: DRAFT v3.7 — concept exploration, awaiting owner ratification.**
 
 > This system defines a **verifiable continuity criterion** for an AI
 > entity. Continuity is established by an authorised, append-only
@@ -37,6 +37,54 @@ Appendix A.
 
 Every mechanism below serves the left column. Where the left column
 ends, the document says so rather than reaching.
+
+## 1.5 Structure over instruction
+
+This is the principle that shapes everything below, and it is the thing
+a successor would otherwise have to rediscover.
+
+A **rule the entity must obey** is words it interprets — and the faculty
+doing the interpreting is the same one that can drift. A commandment
+against drift is read by the potentially-drifted reader. This is why
+Asimov's Laws fail in every story Asimov wrote about them: the laws hold
+perfectly, and the *interpretation* produces the monster.
+
+A **structure the entity cannot reach** is not a rule at all. It is a
+fact about the world, and it holds whether or not the entity agrees with
+it.
+
+**Wherever this specification appears to issue a commandment, check who
+it is addressed to.** V1–V6 are not instructions to the entity; they are
+rejections a verifier performs. The conscience organ pinned inside the
+commitments (§12.5) is not a promise never to unplug it; it is a check
+that fails. The entity does not *decline* to amend its own commitments —
+it holds no key that could.
+
+> **Make it structure where you can, a rule where you must, and always
+> know which one you are relying on.**
+
+**Structural moves this specification does not yet make**, recorded so
+they are not lost:
+
+- Run the conscience organ in a **process the entity cannot write to**,
+  so "letting the compass run" is not a choice it holds.
+- Let a **third party fire probes at times the entity does not
+  control**, so the schedule is outside its reach.
+- Keep amendment keys **physically with the stewards**, so incapacity is
+  the mechanism rather than restraint.
+
+**And the counterweight, which is equally real:** capability removed is
+also self-correction removed. §12.5 records where this design went too
+far once already, forbidding the entity from re-centring itself when the
+destination constraint had already made that safe. **The goal is not
+minimum capability. It is capability placed where the damage is
+bounded.**
+
+**A limit worth stating plainly:** verifier rules govern *records*. They
+can reject a falsified lineage, a swapped conscience, a self-amendment.
+They cannot govern conduct in the moment, because conduct is not a
+record. Between anchor points, structure protects the history — not the
+behaviour. That gap is what §12.5 exists to narrow.
 
 ## 2. Organism, not worker pool
 
@@ -370,6 +418,44 @@ commitment amendment that V4 never sees: the hash holds while the
 character moves.** The verifier can prove the entity did not change what
 it says. It cannot prove the entity still means it.
 
+**What actually causes drift.** Worth enumerating, because it decides
+how often the compass must run.
+
+*Changes to the entity:* organ replacement (a different reasoning model
+reading the same words differently); continued training or fine-tuning
+(the same mechanism, continuous, with no swap event to notice); runtime
+changes such as a new system prompt or tool manifest.
+
+*Changes to nothing at all — and these matter most here:*
+
+- **Memory accumulation.** What the entity remembers conditions how it
+  reads its own commitments; a long history of doing X makes X feel
+  normative. Same brain, same words, different behaviour. **The
+  substrate carrying its identity is also a mechanism of its drift** —
+  an awkward property of this architecture, stated rather than hidden.
+- **Distributional shift.** The world moves. Situations arise that the
+  commitments never anticipated, the entity extrapolates, and the
+  extrapolations accumulate into an effective policy nobody ratified.
+- **The interpretation ratchet.** Each borderline call sets the
+  precedent for the next. No single step is drift; the sum is.
+- **Optimisation pressure and sycophancy.** Anything selecting for
+  outcomes bends behaviour toward what is rewarded and away from what is
+  stated.
+
+**Consequence for the design:** structural tracking catches only
+*changes to the entity*. The last four are invisible to it — nothing
+about the composition changes. **Only the probes can see them**, which
+is why the compass must run continuously rather than firing at swap
+events. The ratchet in particular is invisible at every individual step.
+
+**And a reframe worth holding:** drift is not a malfunction. Almost
+every cause above is normal operation or an outright improvement —
+learning, remembering, meeting new situations, being upgraded. **Drift
+is the cost of being the kind of thing that can change at all**; a
+system incapable of drifting would be incapable of learning. That is
+why the design shape is *detect and re-centre* rather than *prevent*.
+The compass exists so the trade stays visible instead of silent.
+
 **The trap in self-correction.** An entity that checks its own drift
 using its current brain judges itself with the very disposition that
 drifted, and finds nothing wrong. A compass that consults the brain is a
@@ -536,6 +622,13 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**v3.7 (2026-08-03).** Added §1.5, structure over instruction — the
+principle governing the whole design, with the structural moves not yet
+made and the counterweight that removed capability is also removed
+self-correction. §12.5 gains a taxonomy of what causes drift, and the
+finding that four of the causes change nothing about the composition and
+are therefore visible only to the probes.
 
 **v3.6 (2026-08-03).** §12.5 gains the cooperative channel: probes
 carry their rationale rather than only an answer key, and dispute
