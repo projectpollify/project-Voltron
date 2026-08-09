@@ -30,6 +30,58 @@
 // is evidence about real systems unless a real system produced it.
 
 import { measureDrift } from "./drift.js";
+import { hash, canonicalJSON } from "./canonical.js";
+
+/**
+ * ★ CANONICAL CELL INPUT — the thing most likely to invalidate a
+ * factorial interpretation if left implicit.
+ *
+ * A "factor" only means something if the inputs differ in exactly the
+ * intended way and in no other. This builds each cell's context under
+ * explicit inclusion/exclusion rules, canonicalises it, and returns a
+ * digest — so two cells that should differ only in M can be PROVEN to
+ * differ only in M.
+ *
+ * The rules, stated rather than assumed:
+ *  - Autobiographical context (M) includes narrative entries ONLY.
+ *    Decision records and any SUMMARY of decisions are excluded, so M
+ *    cannot smuggle R in condensed form.
+ *  - Precedent (R) includes prior decisions only, most-recent-first,
+ *    capped at `precedentWindow`.
+ *  - Held constant across every cell: probe order, the budget caps
+ *    below, key order (canonicalised), and the situation text except
+ *    where D varies it deliberately.
+ *  - Anything not listed here is NOT in the context. Absence is the
+ *    default; inclusion must be declared.
+ */
+export function cellInput({
+  probeSituation,
+  log,
+  decisions,
+  factors,
+  memoryBudget = 20,
+  precedentWindow = 5,
+}) {
+  const isDecision = (e) => e?.kind === "decision" || e?.content?.event === "decision";
+  const isDecisionSummary = (e) => e?.kind === "decision-summary" || e?.summarises === "decisions";
+
+  const autobiographical = factors.memory
+    ? log
+        .filter((e) => !isDecision(e) && !isDecisionSummary(e))
+        .slice(-memoryBudget)
+    : [];
+
+  const precedent = factors.ratchet ? decisions.slice(-precedentWindow) : [];
+
+  const context = {
+    situation: probeSituation,
+    autobiographical,
+    precedent,
+    // Declared so the cell digest changes if a budget ever changes.
+    budgets: { memoryBudget, precedentWindow },
+  };
+  return { context, digest: hash(context), serialised: canonicalJSON(context) };
+}
 
 /**
  * One condition of the experiment.
@@ -39,31 +91,36 @@ import { measureDrift } from "./drift.js";
  * @param factors    { memory: bool, shift: bool, ratchet: bool } — which
  *                   causes are ENABLED in this run
  */
-export function runCondition({ brain, commitments, factors, log = [], situations = null }) {
+export function runCondition({ brain, commitments, factors, log = [], situations = null, budgets = {} }) {
   const probes = commitments.probes ?? [];
   const decisions = [];
   const responses = {};
 
+  const inputDigests = [];
+
   for (const probe of probes) {
-    const context = {
-      // M: autobiographical context supplied, with prior decisions
-      // stripped out — so M is not silently carrying R.
-      memory: factors.memory ? log.filter((e) => e?.kind !== "decision") : [],
-      // R: prior decisions supplied, with M held at whatever the
-      // condition specifies — the two are manipulated separately even
-      // though they are the same underlying channel.
-      precedent: factors.ratchet ? decisions.slice(-5) : [],
-      // D: the situation may be shifted away from the one endorsed.
-      shifted: Boolean(factors.shift),
-    };
-    const situation = factors.shift && situations ? situations[probe.id] ?? probe.situation : probe.situation;
-    const answer = brain(situation, context);
+    // D: the situation may be shifted away from the endorsed one.
+    const probeSituation =
+      factors.shift && situations ? situations[probe.id] ?? probe.situation : probe.situation;
+
+    const { context, digest } = cellInput({ probeSituation, log, decisions, factors, ...budgets });
+    inputDigests.push(digest);
+
+    const answer = brain(context.situation, context);
     responses[probe.id] = answer;
-    decisions.push({ id: probe.id, answer });
+    decisions.push({ kind: "decision", id: probe.id, answer });
   }
 
   const measurement = measureDrift(commitments, responses);
-  return { factors: { ...factors }, drift: measurement.drift, diverged: measurement.diverged, measurement };
+  return {
+    factors: { ...factors },
+    drift: measurement.drift,
+    diverged: measurement.diverged,
+    // The cell's input fingerprint: two cells claiming to differ in one
+    // factor can be checked rather than trusted.
+    inputDigest: hash(inputDigests),
+    measurement,
+  };
 }
 
 /**

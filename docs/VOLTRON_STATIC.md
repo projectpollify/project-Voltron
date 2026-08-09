@@ -185,7 +185,8 @@ compositionN = {
   memoryHead:   hash(autobiographical log head),  // §6.2
 
   change:       "genesis" | "organ-swap" | "memory-advance"
-              | "commitment-amendment" | "rupture",
+              | "commitment-amendment" | "rupture" | "restore",
+  restoresFrom: hash(ancestor composition) | null,  // restore only
   reason:       plain-language why this happened,
   signatures:   [ { keyId, sig } ],
   at:           timestamp
@@ -363,15 +364,34 @@ document `A`; `A.effectiveFrom ≤ R.at`; every signing key in
 `R.signatures` appears in `A.activeKeys` and is not revoked as of
 `R.at`; and the signatures satisfy `A.quorumRules[R.change]`.
 
-**`A` must additionally be the authority document effective for `P`,
-or a valid successor of it** — anchored, and succeeded under its own
-predecessor document's amendment rule. Without this clause a successor
-could point at a newly minted authority document naming its author,
-and authorisation would be self-granting.
+**For CONTINUATION records, `A` must additionally be the authority
+document effective for `P`, or a valid successor of it** — anchored, and
+succeeded under its own predecessor document's amendment rule. Without
+this clause a successor could point at a newly minted authority document
+naming its author, and authorisation would be self-granting.
+
+**For GENESIS and RUPTURE records there is no `P`**, so the succession
+clause cannot apply. Those satisfy V3 by meeting the applicable
+genesis or recovery rule in the authority document they name — which is
+why a rupture is restricted to the recovery role, and why a genesis
+authority is trusted by assertion (§5).
 
 **V4 — Commitments.** If `R.change ≠ "commitment-amendment"`, then
 `R.commitments = P.commitments`. Otherwise V3 held for the amendment
 rule specifically, and `P.commitments` remains retrievable.
+
+**V4 for `restore`.** A restoration is checked separately, because its
+destination is what bounds it:
+1. `R.restoresFrom` must name a record that is an **ancestor of `R`** —
+   a restoration may only return where the lineage has actually been.
+2. `R.commitments` must equal that ancestor's **exactly** — otherwise it
+   is an amendment wearing a restoration's name.
+3. **If the restoration crosses a commitment amendment** (that is,
+   `R.commitments ≠ P.commitments`), the record must additionally
+   satisfy the **commitment-amendment quorum**. Without this a restore
+   is a silent veto over the quorum that amended.
+Memory is never rewound: V5 applies unchanged, so re-centring changes
+character and leaves history intact.
 
 **V5 — Memory.** `R.memoryHead` must **extend** `P.memoryHead`: the
 log from `P.memoryHead` to `R.memoryHead` consists solely of appended
@@ -397,10 +417,14 @@ as the continuation of the other.
 | Who authorised it, and were they entitled? | V3 |
 | Siblings or the same continuation? | V6 |
 
-### 11.7 The first-person relation
+## 11.9 The first-person relation
+
+*A conceptual section, not a verifier rule. It sits after §11 because it
+builds on the verifier's machinery, but it establishes nothing a
+verifier checks.*
 
 V1–V6 are what an **outsider** can establish about a lineage. This
-subsection is what the **entity** can establish about itself. The
+section is what the **entity** can establish about itself. The
 difference is not cosmetic and it is not sentiment: it rests on holding
 something only the subject holds — the entity key registered in the
 authority document governing its lineage.
@@ -651,6 +675,27 @@ reasons in §12.6.2.
 | **Distributional shift** | Remains | The world moves regardless. |
 | **Interpretation ratchet** | Remains | An entity that reasons about borderline cases sets precedent for itself. |
 
+### 12.6.1a STATIC's rules, as verifier semantics
+
+STATIC's pins are **named rules**, not prose. They engage only when the
+commitment set pins them — a lineage that pins nothing is not under
+STATIC — and they are enforced by the same verifier that runs V1–V6.
+
+**S1 — Organ pin.** If the commitment set names an organ set, `R.organs`
+must equal it exactly, role for role. Under STATIC, changing *any* organ
+therefore requires a quorum-authorised commitment amendment.
+
+**S2 — Runtime pin.** If the commitment set names a runtime measurement,
+`R.runtime` must equal it. A prompt or tool-manifest edit becomes a
+commitment amendment rather than an invisible change.
+
+**S3 — Commitment binding.** The commitment-set artefact explicitly
+contains the pinned **organ set**, the **runtime measurement**, the
+**conscience organ hash**, and the **probes**. Because the commitments
+hash covers all four, none can be altered without the amendment quorum —
+and the conscience organ can be neither swapped for a compliant one nor
+unplugged while the probes sit anchored with nothing to run them.
+
 ### 12.6.2 ⚠ Experimental confounds — stated before the experiment, not discovered by it
 
 **A freeze of the composition is not a freeze of everything.** These
@@ -696,6 +741,28 @@ memory rather than a separate mechanism. They are separable as
 an underlying channel, additivity would be the surprising result. The
 harness reports interaction size; it does not treat its presence as a
 finding.
+
+#### 12.6.3a Canonical cell inputs — the operational definition
+
+"Held constant" means nothing until it is a serialisation rule. A factor
+is only interpretable if two cells differ in **exactly** the intended
+way and in no other, so every cell is built under declared
+inclusion/exclusion rules, canonicalised, and **hashed** — making
+"these cells differ only in M" checkable rather than asserted.
+
+| Question | Rule |
+|---|---|
+| What counts as autobiographical context (M)? | Narrative log entries only, most recent first, capped at `memoryBudget` |
+| Are summaries of prior decisions in M? | **No.** A summary of decisions is R in condensed form; both decision records *and* decision summaries are excluded from M |
+| What does "M held constant" mean when R is toggled? | The autobiographical slice is computed independently of R and is byte-identical across the R toggle |
+| What is in R? | Prior decisions only, most recent first, capped at `precedentWindow` |
+| Is context order canonicalised? | Yes — recursive key sort, arrays keep meaningful order |
+| Are budgets and decoding fixed? | `memoryBudget` and `precedentWindow` are declared **inside** the cell input, so any change alters the cell digest and cannot pass unnoticed. Seed, decoding parameters, runtime image and tokenisation must be pinned by the operator and recorded alongside |
+| What about anything not listed? | **Absent by default.** Inclusion must be declared; nothing enters a context implicitly |
+
+Each condition records the hash of its cell inputs. **A sweep whose
+cells cannot be shown to differ only in the intended factor is not a
+factorial experiment**, whatever its numbers say.
 
 ### 12.6.4 The design and its null
 
@@ -778,6 +845,17 @@ indifferent to artefact size, and steps 1–4 are pure data structures.
 ---
 
 ## Appendix A — revision history
+
+**STATIC variant, rev 3 (2026-08-03).** Formalises what was previously
+prose. Adds `restore` to §4's change enum with `restoresFrom`, and
+states V4's three-part treatment of it including the amendment-quorum
+requirement when a restoration crosses an amendment. Adds §12.6.1a
+naming S1 (organ pin), S2 (runtime pin) and S3 (commitment binding) as
+verifier semantics. Gives V3 an explicit genesis/rupture exception,
+matching the one V4/V5 already had. Adds §12.6.3a, canonical cell
+inputs, with declared inclusion/exclusion rules and a per-cell digest so
+"these cells differ only in M" is checkable. Moves the first-person
+relation from §11.7 to a standalone §11.9 marked conceptual.
 
 **STATIC variant, rev 2 (2026-08-03).** §12.6 rewritten against review.
 Adds an experimental-confounds subsection stated before the experiment;

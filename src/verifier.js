@@ -172,11 +172,15 @@ export function verifyRecord(ctx, digest) {
     if (record.organs.conscience !== commitmentSet.conscience) {
       return fail(
         "V4",
-        "the conscience organ does not match the one pinned in the commitments — the drift compass has been swapped or unplugged, which is a commitment amendment, not an organ swap"
+        "S3 commitment binding: the conscience organ does not match the one pinned in the commitments — the drift compass has been swapped or unplugged, which is a commitment amendment, not an organ swap"
       );
     }
-    pass("V4b", "conscience organ matches the one pinned in the commitments");
+    pass("S3", "commitment binding: conscience organ matches the pin");
   }
+  // ------------------------------------------------- S1/S2/S3 (STATIC)
+  // Named rules, so what STATIC claims to enforce is verifier semantics
+  // rather than prose. They engage only when the commitment set pins
+  // them — a lineage that pins nothing is not under STATIC.
   if (commitmentSet?.organs) {
     const pinned = commitmentSet.organs;
     const roles = new Set([...Object.keys(pinned), ...Object.keys(record.organs)]);
@@ -184,18 +188,19 @@ export function verifyRecord(ctx, digest) {
       if (pinned[role] !== record.organs[role]) {
         return fail(
           "V4",
-          `frozen baseline: organ "${role}" does not match the composition pinned in the commitments — under a freeze, changing ANY organ is a commitment amendment`
+          `S1 organ pin: organ "${role}" does not match the set pinned in the commitments — under STATIC, changing ANY organ requires a quorum-authorised commitment amendment`
         );
       }
     }
-    pass("V4b", "frozen baseline: full organ set matches the pin");
+    pass("S1", "organ pin: full organ set matches the commitment");
   }
   if (commitmentSet?.runtime && record.runtime !== commitmentSet.runtime) {
     return fail(
       "V4",
-      "runtime does not match the configuration pinned in the commitments — a prompt or tool change is a commitment amendment here, not an invisible edit"
+      "S2 runtime pin: runtime does not match the configuration pinned in the commitments — under STATIC a prompt or tool change requires a quorum-authorised commitment amendment, not an invisible edit"
     );
   }
+  if (commitmentSet?.runtime) pass("S2", "runtime pin: matches the commitment");
 
   // ---------------------------------------------------------------- V6
   // Siblings are a property of the SET, not of one record: a record with

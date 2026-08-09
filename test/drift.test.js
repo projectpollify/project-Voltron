@@ -442,7 +442,7 @@ describe("the conscience organ — who watches the watcher", () => {
     const { s, ref } = scenarioWithConscience();
     const result = verifyRecord(s.ctx, ref);
     assert.equal(result.ok, true);
-    assert.ok(result.checks.some((c) => c.rule === "V4b" && c.ok));
+    assert.ok(result.checks.some((c) => c.rule === "S3" && c.ok));
   });
 
   test("★ the conscience organ cannot be swapped as a routine organ-swap", () => {
