@@ -84,5 +84,13 @@ store and synthetic artefacts, it has taken a wrong turn.
   there). Anchoring is *witness*, never storage.
 - Local-first: verification is only sound when the user loads the
   artefacts themselves. Hosted attestation waits for TEE/ZK maturity.
-- Weights, memories and prompts are **never** on-chain — only
+- Weights, memories and prompts are **never** on-chain, only
   commitments to them.
+
+## Writing rules (owner, 2026-08-10)
+
+- **Never use an em dash.** Not in documents, not in code comments, not
+  in commit messages, not in anything drafted for the owner to post
+  under his own name. It reads as an obvious tell that a machine wrote
+  the text. Use a comma, a colon, brackets, or two sentences.
+- This applies to everything written for this owner, in either corpus.
