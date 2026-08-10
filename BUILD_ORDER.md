@@ -217,7 +217,63 @@ is a plumbing proof and should be described as one.
 
 ---
 
-## Phase 2: Real artefacts
+## Phase 2: Real artefacts ✅ CLOSED 2026-08-10
+
+**The organs are files you can open.**
+
+| | |
+|---|---|
+| Record | `27a9a985…843bc2` (organ-swap, predecessor `03378d69…`) |
+| Transaction | [`33f2bf02…d7e37d`](https://preprod.cardanoscan.io/transaction/33f2bf024fa02b77f6f312296fa7281770eb25be2b55f870322a7a4789d7e37d) |
+| Block | 5040513, position 4 |
+| `brain` | `organs/reasoner.prompt.md`, 1201 bytes, `d980dcf9…` |
+| `tools` | `organs/tools.manifest.json`, 1769 bytes, `330956c3…` |
+
+V1 through V6 passed against the live chain. V5 confirmed the memory
+extended by one entry, so the entity's own history records that its
+organs were replaced. 95 tests green.
+
+### ★ The design decision this phase forced
+
+Genesis is anchored and cannot be edited. So Phase 2 could not *correct*
+the placeholders; it had to **continue the lineage** with an
+`organ-swap` record naming genesis as predecessor.
+
+That is the more honest shape anyway. "The organs used to be
+placeholders and are now files" is a fact about this entity's history,
+and a lineage is precisely the thing that carries such facts. It is also
+**the first time permanence cost us something**, which is worth marking:
+until a record is expensive to have been wrong about, its immutability
+is a claim rather than a constraint.
+
+A related consequence, commented at the site in
+`scripts/anchor-organs.js`: genesis's `reason` string contains an em
+dash, which the owner's writing rule would otherwise remove. Those exact
+bytes are hashed into `85a67783…`. **The text is evidence now, not
+prose**, and editing it would break the rebuild check and orphan the
+lineage.
+
+### It ran clean the first time, and that was not luck
+
+Phase 1 found two bugs by spending transactions. Phase 2 added a
+**pre-flight test** that puts the exact record shape through the real
+verifier with an in-memory anchor store, plus `src/keystore.js` to hold
+the key-serialisation defect in one tested place.
+
+The lesson generalises and should govern Phase 3: **when a run finds a
+bug, move the check back into the suite rather than only fixing the
+bug.** Tests cover the parts and only a run covers the seams, so every
+seam a run exposes is a test that was missing.
+
+### Still open from this phase
+
+**Retrievability, unchanged.** A hash proves what a file *was*; it does
+not make the file *available*. The organs here happen to be in the git
+repo, which is a distribution channel and not a guarantee, and a `.gguf`
+at Phase 4 will not fit in one. Decide when artefacts must be publicly
+fetchable, not before.
+
+---
 
 **Goal:** the pinned organs are real files, hashed and retrievable,
 rather than test fixtures.
