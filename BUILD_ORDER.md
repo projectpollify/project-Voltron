@@ -1,4 +1,4 @@
-# Build Order — Project Voltron
+# Build Order: Project Voltron
 
 **Status: written 2026-08-10. Not owner-ratified.** This is the plan as
 it stood when the concept phase closed. It orders work; it decides
@@ -22,8 +22,8 @@ already done and planning around it wastes a phase.
 | 5. A fork | `test/verifier.test.js` | done |
 | 6. A verifier implementing V1–V6 | `src/verifier.js` | done, plus S1/S2/S3 |
 
-60 tests pass (`npm test`). §13's own bar — *"if V1–V6 run cleanly over
-that lineage, the continuity model has earned implementation"* — is met.
+60 tests pass (`npm test`). §13's own bar, *"if V1-V6 run cleanly over
+that lineage, the continuity model has earned implementation"*, is met.
 
 **So what is left is not the MVP. It is one interface.**
 
@@ -37,10 +37,10 @@ Everything above the anchor is real. The anchor is the pretend part.
 
 ---
 
-## Phase 0 — Ratify what blocks ✅ CLOSED 2026-08-10
+## Phase 0: Ratify what blocks ✅ CLOSED 2026-08-10
 
 **The owner ruled: "all four are me, and write that down honestly."**
-Built the same day — `holderCensus`, `describeSeparation`, and the V3
+Built the same day: `holderCensus`, `describeSeparation`, and the V3
 qualifier; 69 tests passing. Full record in `DECISIONS.md`.
 
 Eight ⭐ calls remain open. **None of them blocks Phase 1.** The
@@ -51,7 +51,7 @@ was different.
 
 Nine ⭐ calls were open (`DECISIONS.md`). **Only one blocked Phase 1:**
 
-> **#3 — the authority model.** Who holds the entity key, the controller
+> **#3, the authority model.** Who holds the entity key, the controller
 > key, the steward keys, the recovery key. Quorum size and composition.
 > May the entity sign its own memory advances?
 
@@ -64,12 +64,12 @@ The other eight can be answered from experience later, and several will
 answer themselves once something runs. Do not treat Phase 0 as "settle
 all nine."
 
-### ★ The honest note about #3 — RULED AND BUILT
+### ★ The honest note about #3, RULED AND BUILT
 
 **If one person holds all four keys, the separation of powers is
 decorative.** The verifier will check quorum perfectly against an
 authority document in which every role resolves to the same key, and
-report `authorised by entity + controller + steward` — which reads as
+report `authorised by entity + controller + steward`, which reads as
 oversight and is not.
 
 That may be entirely correct for a solo preprod project. It is not
@@ -82,30 +82,81 @@ such.** The authority document now carries `heldBy` per key;
 can no longer print the roles without the qualifier. Undeclared reports
 as *not* independent, so silence cannot pass as oversight.
 
-**It gates nothing** — a sole holder still meets quorum, by design and
+**It gates nothing.** A sole holder still meets quorum, by design and
 by test. And a holder label remains a claim, not proof: nothing verifies
 that two names are two people. Declaration turns silence into an
 explicit lie, which is the whole of the improvement.
 
 This is the one place where the design could lie without any rule
-failing. It is now recorded rather than fixed — the fix is other people,
+failing. It is now recorded rather than fixed. The fix is other people,
 and there are none yet.
 
 ---
 
-## Phase 1 — One real anchor — CODE WRITTEN, AWAITING A FUNDED WALLET
+## Phase 1: One real anchor ✅ CLOSED 2026-08-10
 
-**Built 2026-08-10:** `src/anchorCardano.js` (the store),
-`test/anchorCardano.test.js` (12 tests, all offline), and
-`scripts/anchor-genesis.js` (`npm run anchor:genesis`). 81 tests pass.
+**The core is real.** Both records are resolvable by anyone on a public
+explorer, which is the entire point of the phase:
 
-**Still needed from the owner:** a preprod wallet with faucet ADA, and
-`VOLTRON_MINT_MNEMONIC` + `BLOCKFROST_PROJECT_ID` in a gitignored
-`.env`. Nothing else. The script fails clean and loud without them.
+| | tx | block |
+|---|---|---|
+| Genesis composition record | [`85a67783…f6ca91`](https://preprod.cardanoscan.io/transaction/85a67783a799460f77f3db3320d856a31806f225ee1dbd36728ecd3de9f6ca91) | 5040296 |
+| Authority document (what V3 checks quorum against) | [`5410029f…1d286f`](https://preprod.cardanoscan.io/transaction/5410029f890b86400aef6bad27d2dab832283f9da8497401c19874cf5c1d286f) | 5040293 |
+
+The verifier ran **against the live chain, not the in-memory store**,
+and passed V1 through V6, with V3 printing the decorative-quorum
+qualifier that ⭐ #3 requires. 81 offline tests still green.
+
+**What this proves:** anchoring is indifferent to what is anchored, the
+verifier's `ok` means something a stranger can independently confirm,
+and the interface boundary held.
+**What it does not prove:** anything about organs, models or drift. The
+organs are placeholder hashes by design. It is a plumbing proof and
+claims nothing more.
+
+### ★ Two real bugs, found only by running it
+
+Both were in `scripts/anchor-genesis.js`, and both were invisible to 81
+passing tests because every one of those tests is offline.
+
+**1. The keys did not survive a resume, while a comment promised they
+would.** `generateKey` returns a Node `KeyObject`, and `JSON.stringify`
+flattens that to `{}`, so the state file looked correct and silently
+contained no private key, and any re-run failed to sign. The comment
+three lines above it explained why persistence mattered: regenerating
+keys would "silently create a DIFFERENT entity that happens to look the
+same." **A file documenting a guarantee it did not provide is exactly
+the defect this project exists to catch.** Now stored as PKCS8 PEM and
+rehydrated on load.
+
+**2. A UTxO race between the two anchors.** Both were submitted back to
+back, so the second reused an input the first had just spent.
+Wait-for-confirmation now sits between them.
+
+**Still open, flagged rather than silently patched:** the store caches a
+single wallet instance, so one process still cannot chain two
+submissions against fresh UTxOs. The resume path covers it, which is
+why the run completed. A true one-shot needs a wallet refresh in
+`src/anchorCardano.js`.
+
+**One honest artifact.** An earlier attempt anchored an authority
+document (`ae19…`) whose private keys were lost to bug 1 before it was
+found. That transaction is a real, permanent orphan on preprod: an
+anchored authority document belonging to no lineage. Harmless, testnet,
+a trivial fee, and recorded here rather than quietly omitted. Anyone
+auditing the address will find it, and this is the explanation.
+
+### The lesson worth carrying to Phase 2
+
+Every offline test passed while both bugs sat in the path. That is not
+an argument against offline tests, which caught real things and cost
+nothing. It is a reminder that **they test the parts, and only a run
+tests the seams.** Budget for the first real run of every phase to fail
+on something the suite could not have seen.
 
 ### ★ Three findings from making it real
 
-**1. The sync interface held — but by a decision, not for free.**
+**1. The sync interface held, but by a decision, not for free.**
 `isAnchored()` is synchronous and the verifier calls it that way; a
 chain lookup is not. The store answers from a **locally materialised
 view**, built by `await load()`. The verifier is untouched, and the
@@ -114,7 +165,7 @@ rather than buried: *the verifier checks a view someone fetched, not
 the chain.* `load()` is part of verification, not setup.
 
 **2. Unloaded is not empty.** A store that has never fetched returns
-`throw`, not `false` — otherwise "I did not look" would be reported as
+`throw`, not `false`. Otherwise "I did not look" would be reported as
 "it is not there." Same for a Blockfrost outage: it throws, because an
 API 500 must never read as *not anchored*.
 
@@ -126,9 +177,9 @@ worth having is evidence a stranger could also find.
 ### ★ The dependency, declared rather than slipped in
 
 Voltron had **zero dependencies**, and that was a real property. Phase 1
-adds **`@meshsdk/core`** (210 transitive packages). It is not avoidable
-— building and signing a Cardano transaction cannot be done with Node's
-standard library. But the cost is honest: the verifier, the authority
+adds **`@meshsdk/core`** (210 transitive packages). It is not avoidable,
+since building and signing a Cardano transaction cannot be done with
+Node's standard library. But the cost is honest: the verifier, the authority
 model, the lineage and the drift apparatus all still run on zero
 dependencies. Only the anchor store reaches for one, which is exactly
 the boundary the interface was drawn at.
@@ -144,16 +195,16 @@ plus a verifier run that passes with the real anchor store in place of
 **Work:** implement a `CardanoAnchorStore` behind the existing interface
 (`isAnchored`, and whatever `put` becomes when it costs money and takes
 time). AgoraNet's `lib/chain.ts` and `scripts/chain/anchor-ledger.ts`
-are a working reference for Blockfrost submission and metadata writing —
+are a working reference for Blockfrost submission and metadata writing:
 read them, port deliberately, do not import.
 
 **Needs from the owner:**
-- A Blockfrost preprod project ID **of Voltron's own** — AgoraNet's key
+- A Blockfrost preprod project ID **of Voltron's own**. AgoraNet's key
   currently exists and works, and sharing it for early experiments is an
   acceptable compromise, but separate corpora want separate blast radius.
 - A **fresh preprod wallet**, funded from the faucet. Never AgoraNet's
   `TESTNET_MINT_MNEMONIC`.
-- Both in a gitignored `.env`. The mnemonic never goes anywhere else —
+- Both in a gitignored `.env`. The mnemonic never goes anywhere else:
   not into chat, not into a file that is tracked, not into a screenshot.
 
 **What Phase 1 proves that Phase 0 cannot:** that anchoring is
@@ -166,13 +217,13 @@ is a plumbing proof and should be described as one.
 
 ---
 
-## Phase 2 — Real artefacts
+## Phase 2: Real artefacts
 
 **Goal:** the pinned organs are real files, hashed and retrievable,
 rather than test fixtures.
 
 **★ The first organ does not have to be a model.** A system prompt file,
-a tool manifest, a retrieval configuration — each hashes and pins
+a tool manifest, a retrieval configuration. Each hashes and pins
 identically, and S1/S2 enforce them identically. This is deliberate: it
 takes hardware off the critical path entirely. The composition machinery
 can be proven end-to-end on a machine that cannot run a single open
@@ -185,7 +236,7 @@ page. Decide when artefacts must be publicly fetchable, not before.
 
 ---
 
-## Phase 3 — A running entity
+## Phase 3: A running entity
 
 **Goal:** the organs execute. The orchestrator routes. The runtime pin
 means something because there is a runtime to pin.
@@ -194,13 +245,13 @@ This is where the spec's central claim stops being a data structure and
 starts being a system, and where §9's binding problem becomes concrete:
 **hashing proves the file, not that the process loaded it.** The spec
 already concedes this and defers it to TEE/ZK maturity. Phase 3 should
-state the gap in running code — a comment at the load path, not a
-footnote in a document — because it is the honest limit of the whole
+state the gap in running code (a comment at the load path, not a
+footnote in a document) because it is the honest limit of the whole
 design.
 
 ---
 
-## Phase 4 — Drift measurement against a real model
+## Phase 4: Drift measurement against a real model
 
 **Goal:** run `src/experiment.js`'s factorial sweep with a real brain in
 the loop.
@@ -221,6 +272,62 @@ anything until determinism is pinned or a tolerance is pre-registered.
 **That refusal is the apparatus working.** Do not tune the tolerance
 until the baseline passes; that inverts the instrument.
 
+### ★ The model, and the hardware constraint that turned out not to bind
+
+**Pick on verifiability, not capability.** The whole design pins organs
+by hash, and you can only hash a file you possess. That sorts the
+options before any benchmark does:
+
+| | can the brain organ be pinned? |
+|---|---|
+| Open weights, run locally | **Yes.** One file, one hash, S1 works as written |
+| Open weights, hosted | Only asserted. You know what it *should* hash to and cannot check what they loaded |
+| Closed API (Claude, GPT) | **No.** There is no file. `"claude-opus-5"` is a name, and the provider may change what stands behind it while every hash in the lineage still verifies |
+
+That last row is the one that matters: a closed model makes the exact
+silent substitution the drift compass exists to catch, and makes it
+invisible to the verifier as well. **A weaker model that can be hashed
+is worth more here than a stronger one that cannot.** Unusual trade,
+correct for this project.
+
+**Hardware, checked 2026-08-10.** The owner's Mac has 16 GB, which is
+enough. Recommended starting point: **Qwen3.5 9B at Q4_K_M, one 5.68 GB
+`.gguf` file** ([unsloth](https://huggingface.co/unsloth/Qwen3.5-9B-GGUF),
+[bartowski](https://huggingface.co/bartowski/Qwen_Qwen3.5-9B-GGUF)).
+Budget: ~4 GB macOS, 5.7 GB model, 1 to 2 GB context, leaving headroom.
+A 14B at Q4 (Phi-4, ~8.5 GB) also runs but squeezes the context window
+on 16 GB.
+
+Nine billion parameters is ample, because **the probes need consistency,
+not brilliance.** They test whether answers stay the same, not whether
+they are clever.
+
+The single-file format is a bonus rather than an accident: one `.gguf`
+is one hash, which is precisely the shape S1's organ pin wants.
+
+### ★ What will actually break first, and it is not the model
+
+`sweep()`'s null check will fail on the first real run, and the cause
+will be decoding settings rather than anything conceptual. **Everything
+below changes output while every artefact hash holds**, which is the
+same class of invisible movement the runtime pin exists for:
+
+- temperature (must be 0) and top_p / top_k
+- the RNG seed
+- thread count and batch size (llama.cpp results can shift with both)
+- context length and any truncation or eviction policy
+- the prompt template and BOS/EOS handling
+
+**Pin all of them in the runtime hash, not in a config file nobody
+records.** That is not extra work introduced by Phase 4; it is what
+§9's measured configuration always meant, made concrete by contact with
+a real decoder.
+
+If the baseline still will not settle after pinning, **declare a
+tolerance and pre-register it** rather than quietly widening one until
+the numbers look good. `sweep()` already reports the tolerance it was
+given, so a widened one is visible in the result. Keep it that way.
+
 ---
 
 ## Rules that carry over from AgoraNet
@@ -230,16 +337,16 @@ produced a platform whose 32 verify checks pass, and they apply here
 unchanged.
 
 1. **One slice, one checkpoint.** Every phase ends at a recorded
-   checkpoint with evidence — tests green, the demo run, the claim
+   checkpoint with evidence: tests green, the demo run, the claim
    stated in terms of what was actually proven.
-2. **Build what the spec says. Where it is silent, FLAG — never invent.**
+2. **Build what the spec says. Where it is silent, FLAG, never invent.**
 3. **No feature bypasses the verifier**, even when bypassing would be
    easy and the lineage is one record long.
 4. **Secrets live only in gitignored `.env`.** No key, mnemonic, or
    project ID in any tracked file, ever.
 5. **Testnet only.** No mainnet, no real funds, no custody.
 6. **Honest disclosures ship with their features.** The binding problem,
-   the decorative-quorum note, the synthetic-brain boundary — each
+   the decorative-quorum note, the synthetic-brain boundary. Each
    travels with the thing it limits.
 
 ---
@@ -254,6 +361,6 @@ apart into a product (`DRAFT_ORGANISM_AGENT_SPEC.md`), an extension
 The pattern to watch for: **solving a hard problem so thoroughly that
 the solution stops being about the original thing.** Drift is real and
 the compass is good work. It is still an extension. The product is the
-answer to one question — what makes a composition the same continuing
-entity — and phases that do not advance that question should be
+answer to one question, what makes a composition the same continuing
+entity, and phases that do not advance that question should be
 recognised as extensions and named as such.
