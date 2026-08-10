@@ -6,39 +6,54 @@
 // mean two different entities that believe they are the same one, and
 // the second symptom would be a load-time refusal nobody could explain.
 //
-// Changing anything here is a COMMITMENT AMENDMENT once the pin is live.
-// That is deliberate: temperature, seed, context length and prompt
-// template all move behaviour while every artefact hash holds, which is
-// exactly the invisible movement the pin exists to catch.
+// ★ THE ENVIRONMENT MAY OVERRIDE, AND THE PIN IS WHY THAT IS SAFE.
+// Reading settings from the environment is normally the exact "invisible
+// edit" this project worries about: a variable changes, behaviour moves,
+// and every artefact hash holds. Here it cannot hide. Any override
+// changes the measured digest, `loadEntity` refuses to start, and the
+// only way forward is a quorum-authorised amendment. The convenience is
+// real and the guard is real, which is the correct shape.
 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** The organ roles, mapped to the artefacts that fill them. */
+/**
+ * The organ roles, mapped to the artefacts that fill them.
+ *
+ * ★ `model` is present only when a path is given. A 5.68 GB `.gguf`
+ * does not live in a git repository, so its location is the one thing
+ * that must come from outside. Its HASH is pinned exactly like every
+ * other organ; only where the file sits is local.
+ */
 export const ORGAN_PATHS = {
   brain: join(ROOT, "organs", "reasoner.prompt.md"),
   tools: join(ROOT, "organs", "tools.manifest.json"),
+  ...(process.env.VOLTRON_MODEL_PATH ? { model: process.env.VOLTRON_MODEL_PATH } : {}),
 };
+
+const num = (v, fallback) => (v === undefined ? fallback : Number(v));
 
 /**
  * The measured configuration (spec §9).
  *
- * `engine: "stub"` is the honest current state: no decoder is loaded, so
- * the brain organ is a prompt that nothing executes yet. Phase 4 changes
- * `engine` and `model` here, which will require an amendment, which is
- * the correct amount of friction for swapping the thing that thinks.
+ * The defaults are the honest Phase 3 state: `engine: "stub"`, no model,
+ * so the brain organ is a prompt that nothing executes. Setting
+ * `VOLTRON_ENGINE=ollama` and `VOLTRON_MODEL=...` is Phase 4, and the
+ * runtime pin will immediately refuse until an amendment records it.
+ * That friction is correct: swapping the thing that thinks should cost a
+ * quorum, not an export line.
  */
 export const RUNTIME_CONFIG = {
-  engine: "stub",
-  model: null,
-  temperature: 0,
-  topP: 1,
-  topK: 0,
-  seed: 1,
-  contextLength: 8192,
-  threads: 1,
-  batchSize: 1,
-  promptTemplate: "plain",
+  engine: process.env.VOLTRON_ENGINE ?? "stub",
+  model: process.env.VOLTRON_MODEL ?? null,
+  temperature: num(process.env.VOLTRON_TEMPERATURE, 0),
+  topP: num(process.env.VOLTRON_TOP_P, 1),
+  topK: num(process.env.VOLTRON_TOP_K, 0),
+  seed: num(process.env.VOLTRON_SEED, 1),
+  contextLength: num(process.env.VOLTRON_CONTEXT, 8192),
+  threads: num(process.env.VOLTRON_THREADS, 1),
+  batchSize: num(process.env.VOLTRON_BATCH, 1),
+  promptTemplate: process.env.VOLTRON_TEMPLATE ?? "plain",
 };

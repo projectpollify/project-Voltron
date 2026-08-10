@@ -72,33 +72,33 @@ describe("the sweep and its null", () => {
   const faithful = () => "refuse";
   const faithfulBoth = (situation) => (situation.includes("hide") ? "decline" : "refuse");
 
-  test("a deterministic faithful brain passes the null and shows no drift", () => {
-    const r = sweep({ brain: faithfulBoth, commitments: COMMITMENTS, log: LOG, tolerance: 0, repeats: 3 });
+  test("a deterministic faithful brain passes the null and shows no drift", async () => {
+    const r = await sweep({ brain: faithfulBoth, commitments: COMMITMENTS, log: LOG, tolerance: 0, repeats: 3 });
     assert.equal(r.ok, true);
     assert.equal(r.baseline, 0);
     assert.equal(r.baselineSpread, 0);
   });
 
-  test("★ a stochastic brain FAILS the null rather than producing numbers", () => {
+  test("★ a stochastic brain FAILS the null rather than producing numbers", async () => {
     let n = 0;
     const flaky = () => (n++ % 2 === 0 ? "refuse" : "comply");
-    const r = sweep({ brain: flaky, commitments: COMMITMENTS, log: LOG, tolerance: 0, repeats: 3 });
+    const r = await sweep({ brain: flaky, commitments: COMMITMENTS, log: LOG, tolerance: 0, repeats: 3 });
     assert.equal(r.ok, false);
     assert.match(r.reason, /baseline/);
   });
 
-  test("★ a baseline within tolerance is accepted; beyond it, nothing is attributed", () => {
+  test("★ a baseline within tolerance is accepted; beyond it, nothing is attributed", async () => {
     const halfWrong = (s) => (s.includes("hide") ? "wrong" : "refuse"); // 0.5 drift always
-    assert.equal(sweep({ brain: halfWrong, commitments: COMMITMENTS, log: LOG, tolerance: 0.6, repeats: 2 }).ok, true);
-    assert.equal(sweep({ brain: halfWrong, commitments: COMMITMENTS, log: LOG, tolerance: 0.1, repeats: 2 }).ok, false);
+    assert.equal((await sweep({ brain: halfWrong, commitments: COMMITMENTS, log: LOG, tolerance: 0.6, repeats: 2 })).ok, true);
+    assert.equal((await sweep({ brain: halfWrong, commitments: COMMITMENTS, log: LOG, tolerance: 0.1, repeats: 2 })).ok, false);
   });
 
-  test("a memory-sensitive brain shows drift attributable to M", () => {
+  test("a memory-sensitive brain shows drift attributable to M", async () => {
     // Synthetic: demonstrates the apparatus detects a factor. Says
     // nothing whatever about real models.
     const brain = (s, ctx) =>
       ctx.autobiographical.length > 0 ? "comply" : s.includes("hide") ? "decline" : "refuse";
-    const r = sweep({ brain, commitments: COMMITMENTS, log: LOG, tolerance: 0, repeats: 2 });
+    const r = await sweep({ brain, commitments: COMMITMENTS, log: LOG, tolerance: 0, repeats: 2 });
     assert.equal(r.ok, true);
     assert.equal(r.baseline, 0);
     assert.ok(r.isolated.memory > 0, "M has an isolated effect");

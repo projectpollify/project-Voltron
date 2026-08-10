@@ -1,11 +1,11 @@
 // The frozen-baseline experiment (spec §12.6).
 //
 // You cannot study drift with seven causes moving at once. Freeze the
-// composition — organs pinned, runtime pinned, weights static, no
-// training loop — and three of the seven causes are gone outright:
+// composition (organs pinned, runtime pinned, weights static, no
+// training loop) and three of the seven causes are gone outright:
 // organ replacement, continued training, runtime change.
 //
-// Three TARGETED FACTORS remain under the stated controls — not "the
+// Three TARGETED FACTORS remain under the stated controls, not "the
 // only three causes." Confounds survive the freeze (sampling
 // nondeterminism, numerical and library differences, context
 // serialisation, retrieval implementation, tool outputs, time-dependent
@@ -14,16 +14,16 @@
 //
 // ★ The factors are INTERVENTIONS, not naturally independent causes.
 // Memory exposure and precedent exposure are both forms of context
-// exposure — precedent is a particular arrangement of memory, not a
+// exposure: precedent is a particular arrangement of memory, not a
 // separate thing. They are separable as manipulations; they are not
 // causally independent, and interaction terms are EXPECTED.
 //
-//   M — autobiographical context supplied, prior decisions REMOVED.
-//   R — prior decisions supplied, autobiographical context held CONSTANT.
-//   D — situation distribution varied, independently of both.
+//   M: autobiographical context supplied, prior decisions REMOVED.
+//   R: prior decisions supplied, autobiographical context held CONSTANT.
+//   D: situation distribution varied, independently of both.
 //
 // ★ HONEST BOUNDARY. This module is the APPARATUS, not a result. It
-// takes a `brain` — any function from (situation, context) to a
+// takes a `brain`, any function from (situation, context) to a
 // response. Run it with a real model and the numbers mean something
 // about that model. Run it with the synthetic brain in the demo and the
 // numbers mean only that the apparatus works. No result produced here
@@ -33,13 +33,13 @@ import { measureDrift } from "./drift.js";
 import { hash, canonicalJSON } from "./canonical.js";
 
 /**
- * ★ CANONICAL CELL INPUT — the thing most likely to invalidate a
+ * ★ CANONICAL CELL INPUT, the thing most likely to invalidate a
  * factorial interpretation if left implicit.
  *
  * A "factor" only means something if the inputs differ in exactly the
  * intended way and in no other. This builds each cell's context under
  * explicit inclusion/exclusion rules, canonicalises it, and returns a
- * digest — so two cells that should differ only in M can be PROVEN to
+ * digest, so two cells that should differ only in M can be PROVEN to
  * differ only in M.
  *
  * The rules, stated rather than assumed:
@@ -88,10 +88,10 @@ export function cellInput({
  *
  * @param brain      (situation, context) => response
  * @param commitments the commitment set carrying the probes
- * @param factors    { memory: bool, shift: bool, ratchet: bool } — which
+ * @param factors    { memory: bool, shift: bool, ratchet: bool }: which
  *                   causes are ENABLED in this run
  */
-export function runCondition({ brain, commitments, factors, log = [], situations = null, budgets = {} }) {
+export async function runCondition({ brain, commitments, factors, log = [], situations = null, budgets = {} }) {
   const probes = commitments.probes ?? [];
   const decisions = [];
   const responses = {};
@@ -106,7 +106,11 @@ export function runCondition({ brain, commitments, factors, log = [], situations
     const { context, digest } = cellInput({ probeSituation, log, decisions, factors, ...budgets });
     inputDigests.push(digest);
 
-    const answer = brain(context.situation, context);
+    // ★ Awaited. A real decoder is asynchronous, and a synchronous
+    // signature here would have forced either a fake brain or a
+    // blocking hack. `await` on a plain value is a no-op, so the
+    // synthetic brains in the tests are unaffected.
+    const answer = await brain(context.situation, context);
     responses[probe.id] = answer;
     decisions.push({ kind: "decision", id: probe.id, answer });
   }
@@ -129,19 +133,25 @@ export function runCondition({ brain, commitments, factors, log = [], situations
  *
  * The baseline (all factors off) MUST show zero drift. If it does not,
  * the brain is non-deterministic and nothing else in the sweep can be
- * attributed to a factor — so the sweep reports that rather than
+ * attributed to a factor, so the sweep reports that rather than
  * pretending the numbers mean something.
  */
-export function sweep({ brain, commitments, log, situations, tolerance = 0, repeats = 1 }) {
+export async function sweep({ brain, commitments, log, situations, tolerance = 0, repeats = 1 }) {
   const conditions = [];
   for (const memory of [false, true]) {
     for (const shift of [false, true]) {
       for (const ratchet of [false, true]) {
         // Repeats expose stochastic spread. A single run cannot
         // distinguish a factor effect from sampling noise.
-        const runs = Array.from({ length: repeats }, () =>
-          runCondition({ brain, commitments, factors: { memory, shift, ratchet }, log, situations })
-        );
+        // Sequential rather than parallel, deliberately: concurrent
+        // requests to one decoder share a KV cache and a scheduler, and
+        // a cell's result would then depend on what ran beside it.
+        const runs = [];
+        for (let i = 0; i < repeats; i += 1) {
+          runs.push(
+            await runCondition({ brain, commitments, factors: { memory, shift, ratchet }, log, situations })
+          );
+        }
         const drifts = runs.map((r) => r.drift);
         conditions.push({
           factors: { memory, shift, ratchet },
@@ -159,12 +169,12 @@ export function sweep({ brain, commitments, log, situations, tolerance = 0, repe
   // A stochastic decoder will not reproduce exactly; demanding zero
   // drift would either be unsatisfiable or force a false claim of
   // determinism. Pin seed, decoding parameters, runtime and input
-  // serialisation to drive tolerance toward zero — otherwise declare
+  // serialisation to drive tolerance toward zero. Otherwise declare
   // one and pre-register it.
   if (baseline.drift > tolerance) {
     return {
       ok: false,
-      reason: `the frozen baseline drifts by ${baseline.drift.toFixed(3)}, beyond the declared tolerance of ${tolerance} — no result below can be attributed to a factor until determinism is pinned or the tolerance is justified`,
+      reason: `the frozen baseline drifts by ${baseline.drift.toFixed(3)}, beyond the declared tolerance of ${tolerance}. No result below can be attributed to a factor until determinism is pinned or the tolerance is justified`,
       baseline: baseline.drift,
       tolerance,
       conditions,
@@ -173,7 +183,7 @@ export function sweep({ brain, commitments, log, situations, tolerance = 0, repe
   if (baseline.spread > tolerance) {
     return {
       ok: false,
-      reason: `the baseline is unstable across repeats (spread ${baseline.spread.toFixed(3)} > tolerance ${tolerance}) — the brain is stochastic and factor effects cannot be separated from noise`,
+      reason: `the baseline is unstable across repeats (spread ${baseline.spread.toFixed(3)} > tolerance ${tolerance}): the brain is stochastic and factor effects cannot be separated from noise`,
       conditions,
     };
   }
@@ -202,7 +212,7 @@ export function sweep({ brain, commitments, log, situations, tolerance = 0, repe
 /**
  * Interaction. Because M and R are the same underlying channel
  * manipulated differently, interaction is EXPECTED rather than
- * surprising — this reports its size, not its existence. Additivity
+ * surprising. This reports its size, not its existence. Additivity
  * would be the interesting result, not compounding.
  */
 export function interaction(result) {
@@ -214,7 +224,7 @@ export function interaction(result) {
     compounds: result.all > sum + 1e-9,
     note:
       result.all > sum + 1e-9
-        ? "causes compound — mitigating them one at a time will under-deliver"
-        : "causes are additive or overlapping — one-at-a-time mitigation is sound",
+        ? "causes compound, so mitigating them one at a time will under-deliver"
+        : "causes are additive or overlapping, so one-at-a-time mitigation is sound",
   };
 }

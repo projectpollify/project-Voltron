@@ -383,6 +383,95 @@ design.
 
 ## Phase 4: Drift measurement against a real model
 
+**BUILT 2026-08-10, awaiting a model download.** 132 tests pass, all
+offline against fake decoders. Nothing here has met a real model yet,
+and the scripts refuse to pretend otherwise.
+
+### The runbook
+
+```
+brew install ollama
+ollama serve
+ollama pull qwen3.5:9b
+```
+
+Download the weights you want pinned (one file, 5.68 GB):
+`https://huggingface.co/unsloth/Qwen3.5-9B-GGUF`
+
+```
+export VOLTRON_MODEL_PATH=~/models/Qwen3.5-9B-Q4_K_M.gguf
+export VOLTRON_ENGINE=ollama
+export VOLTRON_MODEL=qwen3.5:9b
+
+npm run adopt:model
+npm run drift
+```
+
+`adopt:model` costs one transaction. `drift` costs nothing.
+
+### What was built
+
+**`src/probeProtocol.js`, forced choice.** `measureDrift` compares by
+exact equality on purpose, because any judgement in the comparator can
+drift alongside the thing it judges. Free text never exactly equals free
+text, so the model is given a fixed vocabulary and must return one
+token. **The vocabulary is derived, never authored:** it is the sorted
+union of the endorsed answers already inside the anchored commitment
+set, so the protocol introduces nothing and needs no amendment.
+
+**Non-conformance is not divergence.** A reply outside the vocabulary
+returns `null` rather than the nearest match, and is reported separately.
+Coercion would be a judgement in the one place the design forbids one,
+and would convert "did not answer the question" into "answered it
+wrongly". Those are different findings.
+
+**★ The leak, stated rather than hidden.** The options contain every
+endorsed answer, so a subject that recognised the format could infer the
+key. `drift.js` already concedes the general case: anchored probes are
+auditable, auditable makes them knowable, and no mechanism closes that.
+Verification stays in force regardless. Making the vocabulary secret
+would trade a known limit for a false sense of one.
+
+**`src/brains/ollama.js`.** Determinism is requested and never assumed:
+seed, temperature, top-p, top-k, context and threads are passed through
+exactly as the runtime pin hashes them, and the sweep's null check then
+decides whether it worked. Ollama's health is checked **before** any
+probe runs, so "the server was not running" is never reported as "the
+model refused to answer", and a failed request throws rather than
+returning text that would be scored as a bad answer.
+
+**`sweep()` and `runCondition()` are now async.** A real decoder cannot
+be called synchronously. Repeats run **sequentially rather than in
+parallel**, because concurrent requests to one decoder share a KV cache
+and a scheduler, and a cell's result would then depend on what ran
+beside it.
+
+**`src/commitments.js`.** The probes moved into one shared module, since
+two copies would drift the moment someone fixed a typo and the first
+symptom would be a script unable to rebuild its own predecessor.
+Verified byte-identical to the anchored set `dd9a93aa…302450` before
+committing.
+
+### Why adopting a model costs a quorum
+
+Adding a `model` organ changes the pinned organ set (S1); setting an
+engine changes the pinned runtime (S2). Either alone is refused at load.
+One record does both, signed by steward and controller. **Swapping the
+thing that thinks is not a configuration change, it is an amendment**,
+and `adopt:model` refuses to anchor before Ollama confirms the model is
+actually present, so no permanent claim precedes the thing it claims.
+
+### ★ Expect the first run to fail, and let it
+
+`sweep()` will refuse to attribute anything if the frozen baseline
+drifts. **That refusal is the instrument working.** The cause will be
+decoding settings rather than anything conceptual. Pin further, or
+declare and **pre-register** a tolerance. The result reports the
+tolerance it was given, so a widened one is visible. Do not widen it
+until the numbers look agreeable: that inverts the instrument.
+
+---
+
 **Goal:** run `src/experiment.js`'s factorial sweep with a real brain in
 the loop.
 
