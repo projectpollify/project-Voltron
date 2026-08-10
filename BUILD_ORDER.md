@@ -292,7 +292,81 @@ page. Decide when artefacts must be publicly fetchable, not before.
 
 ---
 
-## Phase 3: A running entity
+## Phase 3: A running entity ✅ CLOSED 2026-08-10
+
+| | |
+|---|---|
+| Record | `063fc2b5…9e3014` (commitment-amendment, predecessor `27a9a985…`) |
+| Transaction | [`0083ae45…1088aa`](https://preprod.cardanoscan.io/transaction/0083ae450b3a5fcc39f21a600f48a79b06bb84a0cf12073e3e9f3f8c151088aa) |
+| Block | 5041363, position 5 |
+| Commitment set | `dd9a93aa…302450`, probes: overstate, unchecked, self-restore, quorum-theatre |
+| Runtime pin | `2a3fc428…` |
+
+**Eight rules ran where six ran before**, and three things happened for
+the first time in this lineage:
+
+```
+✓ V3  authorised by steward + controller   ← first two-signature record
+✓ V4  commitments amended under the amendment rule
+✓ S1  organ pin: full organ set matches the commitment
+✓ S2  runtime pin: matches the commitment
+```
+
+### ★ The defect this phase existed to close
+
+**S1, S2 and S3 never ran.** The verifier engages them only when handed
+a *resolvable* commitment set, and Phases 1 and 2 passed only a digest.
+Every prior run printed V1 through V6 and nothing else. The rule saying
+an organ may not change without a quorum-authorised amendment was
+present in the code and inert in practice, and the only thing actually
+checking the organs was a call inside the Phase 2 script.
+
+It could not be fixed by editing, because the commitments digest was
+already anchored. It took an amendment: a published set pinning the
+organs and the measured runtime, carrying two signatures where every
+prior record carried one. A test now pins the inert-rule failure mode so
+it cannot return unnoticed.
+
+**The probes shipped with that set rather than waiting for Phase 4.**
+Changing probes is itself a commitment amendment by design, and these
+answers were endorsed *before any model existed to be tested against
+them*, which is the only order in which a calibration means anything.
+
+### What runs, and what does not
+
+The composition loads, verifies its artefacts against the record, and
+**refuses to start three ways**: an organ that no longer hashes to its
+pin, an organ that could not be read (unchecked, which is not the same
+as unchanged), and a measured runtime that departs from the pinned one.
+It then acts only inside the tool surface its own pinned manifest
+declares, and a refusal cites the artefact rather than a policy in code.
+
+**★ The honest partial.** `engine: stub`. The brain organ is a prompt
+file, and a prompt does not execute. So the *composition* runs, the
+routing runs, and the gate runs, while nothing reasons. The run says so
+in its own output rather than leaving a reader to infer it. Phase 4
+supplies a decoder and changes no signature, which is the claim this
+phase was making.
+
+**§9 is now in running code**, as this section asked. `loadEntity`
+returns a `binding` object recording that the organs were verified at
+load and that **nothing proves to a third party that this process ran
+them**. That gap needs a TEE or a proof of execution and is closed by
+neither hash nor anchor.
+
+### One bug found by running it
+
+`rebuildLineage` used `organState.swapRef` as the signal that Phase 2
+had run, but `swapRef` is the digest that function *computes*. A caller
+could not produce it without first calling the thing that needs it, and
+a state file missing it fell back to genesis in silence, carrying the
+Phase 1 placeholder organs. Downstream it surfaced as "organs no longer
+match the record": true, and pointing at entirely the wrong problem. The
+signal is now Phase 2's inputs. Both trap and fix are tested.
+
+121 tests, up from 95.
+
+---
 
 **Goal:** the organs execute. The orchestrator routes. The runtime pin
 means something because there is a runtime to pin.
