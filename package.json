@@ -11,5 +11,9 @@
   },
   "dependencies": {
     "@meshsdk/core": "^1.9.1"
+  },
+  "overrides": {
+    "undici": "^7.16.0",
+    "ip-address": "^10.4.0"
   }
 }

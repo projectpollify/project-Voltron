@@ -114,6 +114,55 @@ running in TEEs with their own keys**.
 pointer at two assumptions worth re-testing before they harden into
 design.
 
+### ★ VERIFIED 2026-08-10 — and the pointer above was partly wrong
+
+The note above was written from a product talk. Checked directly, here
+is what is actually true, and it is narrower than the talk implied.
+
+**OWS exists and is real.** `@open-wallet-standard/core` on npm,
+v1.4.2, MIT, maintained by **MoonPay engineering** (`svc-sre@moonpay.com`)
+plus Dawn Labs — 32 releases since March 2026. Rust core via native
+FFI. **No install/postinstall script**, which is the usual supply-chain
+vector, so it is unremarkable to install.
+
+**★ IT DOES NOT SUPPORT CARDANO.** Twelve chains: EVM, Solana, Bitcoin,
+Cosmos, Tron, TON, Sui, XRPL, Spark, Filecoin, NEAR, Nano. Cardano is
+absent from the supported-chain table. It therefore cannot sign a
+Cardano transaction today, and cannot be used for anchoring at any
+phase until that changes.
+
+**★ AND IT WAS NEVER A REPLACEMENT.** The earlier framing — OWS *versus*
+a plain mnemonic — was a category error, and this correction matters
+more than the missing chain:
+
+| | job |
+|---|---|
+| Mesh SDK | builds and signs the Cardano transaction |
+| OWS | holds the key, gates *who may sign* before decryption |
+
+Even in a future where OWS speaks Cardano, both would be used. OWS is
+custody and policy; Mesh is transaction construction. They occupy
+different layers.
+
+**Two separate things share the name.** Hoskinson announcing that
+*Cardano* supports an Open Wallet Standard, and *this MoonPay npm
+package* supporting Cardano, are different claims. Only the first has
+any evidence behind it. Do not let the shared name imply a shared
+roadmap.
+
+**What survives, and it is the interesting part.** OWS's actual design —
+keys encrypted at rest, decrypted only inside a signing path, after a
+pre-signing policy engine passes — **is exactly the entity key of
+§11.9**, and a better answer to open call "who signs" than inventing our
+own key handling. That claim is unaffected by the Cardano gap. Re-test
+it at Phase 3, not before.
+
+**Ruling in force (owner, 2026-08-10):** *"Let's do Phase 1 with a plain
+mnemonic. When OWS is mature, we'll swap."* Confirmed correct on the
+evidence, though for a different reason than the one given at the time —
+not that an SDK was unavailable, but that this one does not reach
+Cardano and never occupied that layer anyway.
+
 ## Settled
 
 - **Cardano**, not Bitcoin (owner, 2026-08-02).
