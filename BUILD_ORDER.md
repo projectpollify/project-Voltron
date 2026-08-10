@@ -93,7 +93,47 @@ and there are none yet.
 
 ---
 
-## Phase 1 — One real anchor
+## Phase 1 — One real anchor — CODE WRITTEN, AWAITING A FUNDED WALLET
+
+**Built 2026-08-10:** `src/anchorCardano.js` (the store),
+`test/anchorCardano.test.js` (12 tests, all offline), and
+`scripts/anchor-genesis.js` (`npm run anchor:genesis`). 81 tests pass.
+
+**Still needed from the owner:** a preprod wallet with faucet ADA, and
+`VOLTRON_MINT_MNEMONIC` + `BLOCKFROST_PROJECT_ID` in a gitignored
+`.env`. Nothing else. The script fails clean and loud without them.
+
+### ★ Three findings from making it real
+
+**1. The sync interface held — but by a decision, not for free.**
+`isAnchored()` is synchronous and the verifier calls it that way; a
+chain lookup is not. The store answers from a **locally materialised
+view**, built by `await load()`. The verifier is untouched, and the
+asynchrony moved to a place it never reaches. The consequence, stated
+rather than buried: *the verifier checks a view someone fetched, not
+the chain.* `load()` is part of verification, not setup.
+
+**2. Unloaded is not empty.** A store that has never fetched returns
+`throw`, not `false` — otherwise "I did not look" would be reported as
+"it is not there." Same for a Blockfrost outage: it throws, because an
+API 500 must never read as *not anchored*.
+
+**3. Submitted is not anchored.** `anchor()` returns
+`confirmed: false` and deliberately does **not** write to the cache.
+Only `load()` finding it in a block counts, because the only evidence
+worth having is evidence a stranger could also find.
+
+### ★ The dependency, declared rather than slipped in
+
+Voltron had **zero dependencies**, and that was a real property. Phase 1
+adds **`@meshsdk/core`** (210 transitive packages). It is not avoidable
+— building and signing a Cardano transaction cannot be done with Node's
+standard library. But the cost is honest: the verifier, the authority
+model, the lineage and the drift apparatus all still run on zero
+dependencies. Only the anchor store reaches for one, which is exactly
+the boundary the interface was drawn at.
+
+---
 
 **Goal:** a single composition record anchored to real Cardano preprod.
 

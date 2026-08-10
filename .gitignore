@@ -5,3 +5,7 @@ node_modules/
 dist/
 build/
 *.log
+
+# Phase 1 state: persisted keys and submitted tx hashes.
+# Keys here ARE the entity — losing them ends the lineage.
+.voltron/

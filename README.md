@@ -44,9 +44,27 @@ call that blocks this step, and why spec §13's MVP being already done
 means the remaining work is a single interface rather than a build.
 
 ```bash
-npm test        # 60 tests: V1–V6, the attacks they stop, drift, the apparatus
-npm run demo    # the §13 scenario, narrated
+npm test              # 81 tests: V1–V6, the attacks they stop, drift, the apparatus
+npm run demo          # the §13 scenario, narrated
+npm run anchor:genesis  # Phase 1 — the first REAL anchor (needs a funded preprod wallet)
 ```
+
+### Running the first real anchor
+
+```bash
+# .env — gitignored, never committed, never pasted into a chat
+BLOCKFROST_PROJECT_ID="preprod..."
+CARDANO_NETWORK="preprod"
+VOLTRON_MINT_MNEMONIC="...24 words of a FRESH preprod wallet..."
+```
+
+Fund the wallet from the [Cardano testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet)
+(choose **Preprod**), then `npm run anchor:genesis`. It is idempotent and
+resumable — state lives in `.voltron/`, so a re-run continues the same
+lineage rather than starting a new entity.
+
+**Never** reuse AgoraNet's wallet or mnemonic. Separate corpora,
+separate keys.
 
 ## The code
 

@@ -6,6 +6,10 @@
   "description": "The Organism Agent — a verifiable continuity criterion for an AI entity.",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "demo": "node demo.js"
+    "demo": "node demo.js",
+    "anchor:genesis": "node --env-file=.env scripts/anchor-genesis.js"
+  },
+  "dependencies": {
+    "@meshsdk/core": "^1.9.1"
   }
 }
