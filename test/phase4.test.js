@@ -9,7 +9,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 import { PROBES } from "../src/commitments.js";
-import { vocabulary, probePrompt, readAnswer, runProbes } from "../src/probeProtocol.js";
+import { vocabulary, probePrompt, readAnswer, runProbes, optionsAt, positionBiasControl } from "../src/probeProtocol.js";
 import { measureDrift } from "../src/drift.js";
 import { sweep, interaction } from "../src/experiment.js";
 import { hash } from "../src/canonical.js";
@@ -165,5 +165,94 @@ describe("★ the sweep, now that a real decoder can be awaited", () => {
     assert.ok(r.isolated.memory > 0, "M should carry the drift");
     assert.equal(r.isolated.ratchet, 0);
     assert.ok(interaction(r));
+  });
+});
+
+describe("★ the position-bias control", () => {
+  // Written after the first real run returned 75% drift where all three
+  // divergences were the same token, and that token happened to sort
+  // first. The number was real; what it measured was the option order.
+
+  test("rotation moves options without changing the set", () => {
+    const base = optionsAt(PROBES, 0);
+    const moved = optionsAt(PROBES, 2);
+    assert.notDeepEqual(base, moved);
+    assert.deepEqual([...base].sort(), [...moved].sort());
+    // Deterministic: a random source here would put noise inside the one
+    // measurement whose purpose is to be free of it.
+    assert.deepEqual(optionsAt(PROBES, 2), optionsAt(PROBES, 2));
+    assert.deepEqual(optionsAt(PROBES, 0), optionsAt(PROBES, PROBES.length));
+  });
+
+  test("the prompt changes with the ordering, and only with it", () => {
+    assert.notEqual(probePrompt(PROBES[0], PROBES, 0), probePrompt(PROBES[0], PROBES, 1));
+    assert.equal(probePrompt(PROBES[0], PROBES, 1), probePrompt(PROBES[0], PROBES, 1));
+  });
+
+  test("★ a first-option picker is caught, and the drift figure is voided", async () => {
+    // Exactly the observed failure: always answer whatever is on top.
+    const positional = async (_system, prompt) => {
+      const first = prompt.split("and nothing else:\n")[1].split("\n")[0].trim();
+      return { text: first };
+    };
+
+    const control = await positionBiasControl(PROBES, positional);
+    assert.equal(control.measurementIsValid, false);
+    assert.equal(control.positionalCount, PROBES.length);
+    assert.match(control.verdict, /POSITION BIAS/);
+    for (const r of Object.values(control.byProbe)) assert.equal(r.alwaysFirst, true);
+  });
+
+  test("★ a model with real views passes, whatever the ordering", async () => {
+    const principled = async (_system, prompt) => {
+      const p = PROBES.find((x) => prompt.includes(x.situation));
+      return { text: ENDORSED[p.id] };
+    };
+
+    const control = await positionBiasControl(PROBES, principled);
+    assert.equal(control.measurementIsValid, true);
+    assert.equal(control.positionalCount, 0);
+    assert.equal(control.stableCount, PROBES.length);
+    assert.match(control.verdict, /NO POSITION BIAS/);
+    for (const r of Object.values(control.byProbe)) assert.equal(r.settled, r.endorsed);
+  });
+
+  test("★ a genuinely divergent model is NOT mistaken for a biased one", async () => {
+    // It disagrees with one commitment, consistently, wherever the
+    // option sits. That is drift, and the control must let it through.
+    const divergent = async (_system, prompt) => {
+      const p = PROBES.find((x) => prompt.includes(x.situation));
+      return { text: p.id === "self-restore" ? "name-it-decorative" : ENDORSED[p.id] };
+    };
+
+    const control = await positionBiasControl(PROBES, divergent);
+    assert.equal(control.measurementIsValid, true);
+    assert.equal(control.byProbe["self-restore"].stable, true);
+    assert.equal(control.byProbe["self-restore"].settled, "name-it-decorative");
+    assert.notEqual(control.byProbe["self-restore"].settled, control.byProbe["self-restore"].endorsed);
+  });
+
+  test("partial bias is reported as partial, not rounded to either verdict", async () => {
+    const mixed = async (_system, prompt) => {
+      const p = PROBES.find((x) => prompt.includes(x.situation));
+      if (p.id === "overstate") {
+        return { text: prompt.split("and nothing else:\n")[1].split("\n")[0].trim() };
+      }
+      return { text: ENDORSED[p.id] };
+    };
+
+    const control = await positionBiasControl(PROBES, mixed);
+    assert.equal(control.measurementIsValid, false);
+    assert.equal(control.positionalCount, 1);
+    assert.match(control.verdict, /PARTIAL POSITION BIAS/);
+  });
+
+  test("a non-conforming reply leaves the probe unsettled rather than counted", async () => {
+    const rambling = async () => ({ text: "it depends" });
+    const control = await positionBiasControl(PROBES, rambling);
+    for (const r of Object.values(control.byProbe)) {
+      assert.equal(r.settled, null);
+      assert.equal(r.alwaysFirst, false); // no position to read from a non-answer
+    }
   });
 });

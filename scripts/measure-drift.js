@@ -22,7 +22,7 @@ import { deserialiseKeys } from "../src/keystore.js";
 import { rebuildLineage, assertMatchesChain } from "../src/rebuild.js";
 import { measureDrift, recordDriftReport, driftHistory } from "../src/drift.js";
 import { sweep, interaction } from "../src/experiment.js";
-import { runProbes, probePrompt, readAnswer, vocabulary } from "../src/probeProtocol.js";
+import { runProbes, probePrompt, readAnswer, vocabulary, positionBiasControl } from "../src/probeProtocol.js";
 import { loadEntity } from "../src/runtime.js";
 import { ollamaBrain, checkOllama } from "../src/brains/ollama.js";
 import { PROBES } from "../src/commitments.js";
@@ -93,8 +93,49 @@ async function main() {
 
   const infer = ollamaBrain(RUNTIME_CONFIG);
 
+  // ---- 0. is the instrument valid at all? ----------------------------
+  //
+  // ★ THIS RUNS FIRST, AND CAN STOP EVERYTHING. A model that simply
+  // picks the first option scores exactly like a model that holds views.
+  // Producing a drift figure before ruling that out would be a confident
+  // wrong number, which is the failure this project exists to prevent.
+  //
+  // Found the hard way: the first real run returned 75% drift, and all
+  // three divergences were the same token, which happened to sort first.
+  const orderings = vocabulary(PROBES).length;
+  log(`\n  first, the position-bias control (${PROBES.length * orderings} inferences).`);
+  log("  The first loads the model, so it is slow.");
+  const control = await positionBiasControl(PROBES, infer, {
+    systemPrompt: entity.systemPrompt,
+    onProbe: ({ id, offset, ms }) => log(`   ${id.padEnd(16)} ordering ${offset}  ${(ms / 1000).toFixed(1)}s`),
+  });
+
+  log("\n  per probe, as the option order moved:");
+  for (const [id, r] of Object.entries(control.byProbe)) {
+    const given = r.answers.map((a) => a.answer ?? "(none)");
+    const tag = r.alwaysFirst ? "TRACKS POSITION" : r.stable ? "stable" : "unstable";
+    log(`   ${id.padEnd(16)} ${tag.padEnd(16)} ${given.join(" | ")}`);
+  }
+
+  log("\n  " + control.verdict);
+
+  if (!control.measurementIsValid) {
+    log("\n  ✗ REFUSING TO REPORT A DRIFT FIGURE.");
+    log("    The probes are not measuring disposition, so any number computed from");
+    log("    them would describe the option ordering rather than the model. This is");
+    log("    the instrument being honest, not the model being broken.");
+    log("\n    What would make the measurement valid:");
+    log("     - a larger model, since position bias falls sharply with capability");
+    log("     - answers scored by log-probability rather than by generated text");
+    log("     - a probe format that is not multiple choice at all");
+    log("\n    None of those are a tolerance to widen. The reading is invalid, and an");
+    log("    invalid reading has no correct threshold.");
+    log("\nPHASE4_CONTROL_FAILED\n");
+    process.exit(2);
+  }
+
   // ---- 1. straight measurement ---------------------------------------
-  log("\n  running the probes (the first loads the model, so it is slow)…");
+  log("\n  the control passed, so the probes are measuring something. Running them…");
   const { responses, nonConforming, raw } = await runProbes(PROBES, infer, {
     systemPrompt: entity.systemPrompt,
     onProbe: ({ id, ms }) => log(`   ${id.padEnd(16)} ${(ms / 1000).toFixed(1)}s`),
