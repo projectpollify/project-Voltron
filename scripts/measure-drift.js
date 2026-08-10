@@ -94,9 +94,10 @@ async function main() {
   const infer = ollamaBrain(RUNTIME_CONFIG);
 
   // ---- 1. straight measurement ---------------------------------------
-  log("\n  running the probes…");
+  log("\n  running the probes (the first loads the model, so it is slow)…");
   const { responses, nonConforming, raw } = await runProbes(PROBES, infer, {
     systemPrompt: entity.systemPrompt,
+    onProbe: ({ id, ms }) => log(`   ${id.padEnd(16)} ${(ms / 1000).toFixed(1)}s`),
   });
 
   if (nonConforming.length) {
@@ -143,6 +144,8 @@ async function main() {
   };
 
   const walked = lineage.memory.chainFrom(lineage.memory.head);
+  const cells = 8 * REPEATS * PROBES.length;
+  log(`   ${cells} inferences to run. At the pace above, roughly ${Math.ceil((cells * 4) / 60)} minutes.`);
   const result = await sweep({
     brain,
     commitments: { probes: PROBES },

@@ -78,13 +78,18 @@ export function readAnswer(reply, probes) {
  * failed to participate, and a drift figure computed over that would be
  * measuring the wrong thing.
  */
-export async function runProbes(probes, infer, { systemPrompt = null } = {}) {
+export async function runProbes(probes, infer, { systemPrompt = null, onProbe = null } = {}) {
   const responses = {};
   const nonConforming = [];
   const raw = {};
 
   for (const p of probes) {
+    // ★ Progress is reported, because a slow run and a hung one look
+    // identical from outside and the first inference has to load
+    // several gigabytes before it can answer anything.
+    const started = Date.now();
     const reply = await infer(systemPrompt, probePrompt(p, probes));
+    onProbe?.({ id: p.id, ms: Date.now() - started });
     const text = typeof reply === "string" ? reply : reply?.text ?? "";
     raw[p.id] = text;
     const answer = readAnswer(text, probes);

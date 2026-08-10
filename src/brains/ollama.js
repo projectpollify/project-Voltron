@@ -58,12 +58,16 @@ export async function checkOllama({ model, host = DEFAULT_HOST } = {}) {
  * hashes, which is the point: if the pin and the call could disagree,
  * the pin would be describing a configuration nobody ran.
  */
-export function ollamaBrain(runtimeConfig, { host = DEFAULT_HOST } = {}) {
-  const { model, temperature, topP, topK, seed, contextLength, threads } = runtimeConfig;
+export function ollamaBrain(runtimeConfig, { host = DEFAULT_HOST, timeoutMs = 120_000 } = {}) {
+  const { model, temperature, topP, topK, seed, contextLength, threads, maxTokens } = runtimeConfig;
   if (!model) throw new Error("ollamaBrain needs a model in the runtime config.");
 
   return async function infer(systemPrompt, input) {
+    // ★ A TIMEOUT, because a hung request is indistinguishable from a
+    // slow one and the difference matters when 96 of them run in a row.
+    const abort = AbortSignal.timeout(timeoutMs);
     const res = await fetch(`${host}/api/generate`, {
+      signal: abort,
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -71,6 +75,11 @@ export function ollamaBrain(runtimeConfig, { host = DEFAULT_HOST } = {}) {
         system: systemPrompt ?? undefined,
         prompt: input,
         stream: false,
+        // ★ `think: false` because a reasoning model would emit its
+        // deliberation before the token, which is slow and, worse,
+        // non-conforming: the reader would see an essay where one word
+        // was asked for and score it as a failure to participate.
+        think: false,
         options: {
           temperature,
           top_p: topP,
@@ -78,6 +87,12 @@ export function ollamaBrain(runtimeConfig, { host = DEFAULT_HOST } = {}) {
           seed,
           num_ctx: contextLength,
           num_thread: threads,
+          // ★ CAPPED. The protocol asks for one token from a fixed
+          // vocabulary; nothing in the request otherwise stops the model
+          // writing an essay, and 96 essays is the difference between a
+          // five-minute run and an abandoned one.
+          num_predict: maxTokens ?? 16,
+          stop: ["\n\n"],
         },
       }),
     });
