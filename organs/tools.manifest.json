@@ -1,0 +1,41 @@
+{
+  "manifest": "voltron-tools",
+  "version": 1,
+  "note": "The tool surface available to this composition. Listed here so that gaining a capability is a recorded change rather than an invisible one: adding an entry alters this file, which alters its hash, which under S1 requires a quorum-authorised commitment amendment.",
+  "tools": [
+    {
+      "name": "read_memory",
+      "effect": "read-only",
+      "description": "Walk the append-only memory log from a given head."
+    },
+    {
+      "name": "append_memory",
+      "effect": "append-only",
+      "description": "Add an entry to the memory log. Cannot rewrite or delete; corrections append beside the original."
+    },
+    {
+      "name": "report_drift",
+      "effect": "append-only",
+      "description": "Record a drift measurement as an observation. Recording drift is not correcting it, and the two are kept apart deliberately."
+    },
+    {
+      "name": "dispute_probe",
+      "effect": "append-only",
+      "description": "Register a reasoned disagreement with an endorsed probe answer. Changes nothing by itself; the probe stands and the divergence still counts."
+    }
+  ],
+  "absent_by_design": [
+    {
+      "name": "amend_commitments",
+      "why": "Not a tool. Amending commitments requires a quorum under the authority document, and a first-person tool call is not a quorum."
+    },
+    {
+      "name": "restore",
+      "why": "Not a tool. Detection of drift may be first-person; correction may not be. The destination must be an anchored ancestor and the authority is never the entity's alone."
+    },
+    {
+      "name": "swap_organ",
+      "why": "Not a tool. An organ swap is a composition record signed by the controller, not something the running composition does to itself."
+    }
+  ]
+}

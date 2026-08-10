@@ -8,7 +8,8 @@
     "test": "node --test test/*.test.js",
     "demo": "node demo.js",
     "anchor:genesis": "node --env-file=.env scripts/anchor-genesis.js",
-    "wallet": "node --env-file=.env scripts/show-address.js"
+    "wallet": "node --env-file=.env scripts/show-address.js",
+    "anchor:organs": "node --env-file=.env scripts/anchor-organs.js"
   },
   "dependencies": {
     "@meshsdk/core": "^1.9.1"
