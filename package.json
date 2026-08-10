@@ -9,7 +9,9 @@
     "demo": "node demo.js",
     "anchor:genesis": "node --env-file=.env scripts/anchor-genesis.js",
     "wallet": "node --env-file=.env scripts/show-address.js",
-    "anchor:organs": "node --env-file=.env scripts/anchor-organs.js"
+    "anchor:organs": "node --env-file=.env scripts/anchor-organs.js",
+    "amend:commitments": "node --env-file=.env scripts/amend-commitments.js",
+    "entity": "node scripts/run-entity.js"
   },
   "dependencies": {
     "@meshsdk/core": "^1.9.1"
