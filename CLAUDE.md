@@ -15,6 +15,10 @@ while permitting other organs to change.
 **Read `docs/DRAFT_ORGANISM_AGENT_SPEC.md` before doing anything.** It
 is the product.
 
+**Then read `BUILD_ORDER.md`** — the phase sequence, what blocks what,
+and the one ⭐ call the owner must rule on before Phase 1 can start. It
+is a plan, not law: it orders work and decides nothing.
+
 **Three documents, and do not confuse them:**
 - `DRAFT_ORGANISM_AGENT_SPEC.md` — the continuity specification. THE
   PRODUCT.
@@ -54,11 +58,12 @@ store and synthetic artefacts, it has taken a wrong turn.
    "yes, that is what I mean."** ⭐ items are his calls alone.
 5. **The owner schedules all work.** Sessions never self-start a build.
 
-## Current state (2026-08-03)
+## Current state (2026-08-10)
 
-- Spec **v3.1**, unratified. **Nine ⭐ calls open** — see spec §14.
+- Spec **v4.0**, unratified. **Nine ⭐ calls open** — see spec §14.
   The two heaviest: may the entity amend its own commitments (§12,
   recommendation: ceremonial), and the authority key model (§5).
+  **Only §5 blocks the next phase** — see `BUILD_ORDER.md` Phase 0.
 - **Concept phase closed.** Do not expand the concept document further
   without the owner asking. The remaining uncertainty is empirical.
 - **The verifier is BUILT** — V1–V6 plus the STATIC pins, 60 tests
@@ -69,6 +74,9 @@ store and synthetic artefacts, it has taken a wrong turn.
   needs a ship.
 - **Nothing is real yet:** the anchor store is in-memory, every artefact
   synthetic, and no experiment has ever met a real model.
+- **Spec §13's MVP is DONE** — all six items, 60 tests. What remains is
+  not the MVP; it is one interface (`src/anchor.js`). Everything above
+  the anchor is real. The anchor is the pretend part.
 
 ## Conventions
 

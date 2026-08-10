@@ -39,6 +39,10 @@ That is what converts this from a design into a thing. Not another
 feature — the drift extension and the STATIC protocol are both complete
 and both wait on this, because a compass needs a ship.
 
+**`BUILD_ORDER.md` has the phase sequence** — including the one open ⭐
+call that blocks this step, and why spec §13's MVP being already done
+means the remaining work is a single interface rather than a build.
+
 ```bash
 npm test        # 60 tests: V1–V6, the attacks they stop, drift, the apparatus
 npm run demo    # the §13 scenario, narrated
