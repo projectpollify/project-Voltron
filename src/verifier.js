@@ -90,7 +90,20 @@ export function verifyRecord(ctx, digest) {
     record.at
   );
   if (!quorum.ok) return fail("V3", quorum.reason);
-  pass("V3", `authorised by ${quorum.accepted.map((a) => a.role).join(" + ")}`);
+
+  // ★ V3 passes on KEYS. The note must not let a reader mistake that for
+  // agreement between PEOPLE — "authorised by entity + controller +
+  // steward" reads as three parties and may be one person signing three
+  // times. The qualifier travels with the claim it limits, because a
+  // reader who sees only the roles has been misled by omission.
+  const roles = quorum.accepted.map((a) => a.role).join(" + ");
+  const qualifier =
+    quorum.distinctHolders === null
+      ? " (holders undeclared — agreement between KEYS; this document does not say how many people hold them)"
+      : quorum.distinctHolders === 1
+        ? " — ALL HELD BY ONE DECLARED HOLDER: one signer wearing several roles, not several parties agreeing"
+        : ` across ${quorum.distinctHolders} declared holders`;
+  pass("V3", `authorised by ${roles}${qualifier}`);
 
   // ------------------------------------------------------------- V4/V5
   // Both rules reference the predecessor, which does not exist for a

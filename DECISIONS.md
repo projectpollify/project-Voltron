@@ -10,13 +10,76 @@ and building it will inform several of them.
 |---|---|---|
 | 1 | **The name** | "Organism agent" is descriptive, not chosen |
 | 2 | **May the entity amend its own commitments?** (§12) | Recommendation: permitted but *ceremonial* — quorum, recorded, prior version retrievable |
-| 3 | **The authority model** (§5) | Who holds each key; quorum size and composition; may the entity sign its own memory advances? |
+| ~~3~~ | ~~**The authority model** (§5)~~ | **RULED 2026-08-10 — see below. No longer open.** |
 | 4 | **Is semantic knowledge identity-bearing?** (§6) | Proposed: no — a library, replaceable wholesale |
 | 5 | **Uniqueness** (§3.3) | Proposed: accept branching rather than enforce one live continuation |
 | 6 | **Fork inheritance** (§7) | Does a child inherit the parent's authority document? |
 | 7 | **Attestation** (§10) | Lean on AgoraNet's verified-human gate, or build an independent scheme? |
 | 8 | **Scope** | A single entity, or a public registry others anchor to? |
 | 9 | **Anchor cadence** | Fixed rhythm vs. change-triggered |
+
+**Eight calls remain open. None of them blocks Phase 1.**
+
+---
+
+## ★ Ruling — ⭐ #3, the authority model (owner, 2026-08-10)
+
+**"All four are me, and write that down honestly."**
+
+All four roles — entity, controller, steward, recovery — are held by
+the owner. One person, four keys, four hats. Phase 0 is closed and
+Phase 1 is unblocked.
+
+### Why this needed a ruling at all
+
+`checkQuorum` counts distinct KEYS, because keys are what a cryptosystem
+can see. So a three-of-four quorum over four keys held by one human
+passes perfectly, and the verifier prints:
+
+> `authorised by entity + controller + steward`
+
+which reads as three parties agreeing and is one person signing three
+times. **No rule is broken.** The quorum does exactly what it says. The
+defect is entirely in what a reader infers — and it is the only place in
+the design where every check can pass while the impression given is
+false.
+
+### What was built (2026-08-10, 69 tests passing)
+
+The fix cannot be cryptographic: key custody is a fact about the world,
+not a property of a signature. So the fix is **declaration**.
+
+- `activeKeys[].heldBy` — optional, and covered by the document hash, so
+  a holder claim cannot be altered after the fact without amending the
+  authority.
+- `holderCensus(doc)` — three states, kept distinct on purpose:
+  `undeclared` (says nothing), `partial` (refuses to guess a count),
+  `declared` (a count that is a *claim*).
+- `describeSeparation(doc)` — the sentence a reader needs. For this
+  ruling it prints: *"4 role(s), ALL held by shawn — one person, every
+  role… The separation of powers here is declared decorative."*
+- `checkQuorum` now returns `distinctHolders` and `independent`
+  alongside `accepted`. **It gates nothing.** A sole holder still meets
+  quorum; there is a test asserting exactly that.
+- V3's verifier note now carries the qualifier with the roles it lists,
+  so the misleading string can no longer be printed bare.
+
+`independent` is **false when holders are undeclared**. Deliberate:
+silence must not present as oversight.
+
+### ★ The limit, stated so it cannot quietly stop being true
+
+**A holder label is a claim, not proof.** Nothing verifies that "alice"
+and "bob" are different humans — one person with four keys can write
+four names, and the census will report four holders and
+`independent: true`. There is a test named for this.
+
+What declaration buys is that **the honest case becomes legible and the
+dishonest case requires an explicit lie rather than mere silence.** That
+is the entire improvement. It is not verification of key custody and
+must never be described as such.
+
+The real fix is other people. There are none yet.
 
 ## External findings
 
@@ -57,3 +120,7 @@ design.
 - **Local-first**; hosted attestation deferred until TEE/ZK matures.
 - **Anchor the memory and the commitments; version everything else.**
 - **Concept phase closed** (2026-08-03) — next step is the §13 MVP.
+- **§13's MVP is BUILT** (found 2026-08-10): all six items, tests green.
+  What remains is one interface, `src/anchor.js`. See `BUILD_ORDER.md`.
+- **⭐ #3 ruled** (2026-08-10): all four roles held by the owner,
+  recorded honestly. **Phase 0 closed; Phase 1 unblocked.**

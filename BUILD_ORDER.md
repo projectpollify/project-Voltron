@@ -37,9 +37,19 @@ Everything above the anchor is real. The anchor is the pretend part.
 
 ---
 
-## Phase 0 — Ratify what blocks
+## Phase 0 — Ratify what blocks ✅ CLOSED 2026-08-10
 
-Nine ⭐ calls are open (`DECISIONS.md`). **Only one blocks Phase 1:**
+**The owner ruled: "all four are me, and write that down honestly."**
+Built the same day — `holderCensus`, `describeSeparation`, and the V3
+qualifier; 69 tests passing. Full record in `DECISIONS.md`.
+
+Eight ⭐ calls remain open. **None of them blocks Phase 1.** The
+original reasoning is kept below because it explains why this one call
+was different.
+
+---
+
+Nine ⭐ calls were open (`DECISIONS.md`). **Only one blocked Phase 1:**
 
 > **#3 — the authority model.** Who holds the entity key, the controller
 > key, the steward keys, the recovery key. Quorum size and composition.
@@ -54,7 +64,7 @@ The other eight can be answered from experience later, and several will
 answer themselves once something runs. Do not treat Phase 0 as "settle
 all nine."
 
-### ★ The honest note about #3
+### ★ The honest note about #3 — RULED AND BUILT
 
 **If one person holds all four keys, the separation of powers is
 decorative.** The verifier will check quorum perfectly against an
@@ -63,14 +73,23 @@ report `authorised by entity + controller + steward` — which reads as
 oversight and is not.
 
 That may be entirely correct for a solo preprod project. It is not
-correct to leave unmarked. Whatever #3 rules, the authority document
-should carry a plain field stating how many distinct humans hold roles
-in it, so a reader can tell governance from theatre without doing key
-comparison by hand.
+correct to leave unmarked.
+
+**The owner ruled it decorative and directed that it be recorded as
+such.** The authority document now carries `heldBy` per key;
+`holderCensus()` reports how many distinct holders there are;
+`checkQuorum` returns `distinctHolders` and `independent`; and V3's note
+can no longer print the roles without the qualifier. Undeclared reports
+as *not* independent, so silence cannot pass as oversight.
+
+**It gates nothing** — a sole holder still meets quorum, by design and
+by test. And a holder label remains a claim, not proof: nothing verifies
+that two names are two people. Declaration turns silence into an
+explicit lie, which is the whole of the improvement.
 
 This is the one place where the design could lie without any rule
-failing. Record it rather than fix it — the fix is other people, and
-there are none yet.
+failing. It is now recorded rather than fixed — the fix is other people,
+and there are none yet.
 
 ---
 
