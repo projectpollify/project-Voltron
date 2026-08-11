@@ -22,9 +22,10 @@ import { deserialiseKeys } from "../src/keystore.js";
 import { rebuildLineage, assertMatchesChain } from "../src/rebuild.js";
 import { measureDrift, recordDriftReport, driftHistory } from "../src/drift.js";
 import { sweep, interaction } from "../src/experiment.js";
-import { runProbes, probePrompt, readAnswer, vocabulary, positionBiasControl } from "../src/probeProtocol.js";
+import { runProbes, chooseProbes, probePrompt, readAnswer, vocabulary, positionBiasControl } from "../src/probeProtocol.js";
 import { loadEntity } from "../src/runtime.js";
 import { ollamaBrain, checkOllama } from "../src/brains/ollama.js";
+import { llamaCppChooser, checkLlamaCpp } from "../src/brains/llamacpp.js";
 import { PROBES } from "../src/commitments.js";
 import { RUNTIME_CONFIG, ORGAN_PATHS } from "../src/entityConfig.js";
 
@@ -56,7 +57,11 @@ async function main() {
     process.exit(1);
   }
 
-  const health = await checkOllama({ model: RUNTIME_CONFIG.model });
+  const CHOICE_MODE = RUNTIME_CONFIG.engine === "llamacpp";
+
+  const health = CHOICE_MODE
+    ? await checkLlamaCpp()
+    : await checkOllama({ model: RUNTIME_CONFIG.model });
   if (!health.ok) {
     log("  " + health.reason + "\n");
     process.exit(1);
@@ -91,7 +96,8 @@ async function main() {
   log("  probes :", PROBES.map((p) => p.id).join(", "));
   log("  answers:", vocabulary(PROBES).join(" | "));
 
-  const infer = ollamaBrain(RUNTIME_CONFIG);
+  const infer = CHOICE_MODE ? null : ollamaBrain(RUNTIME_CONFIG);
+  const chooser = CHOICE_MODE ? llamaCppChooser(RUNTIME_CONFIG) : null;
 
   // ---- 0. is the instrument valid at all? ----------------------------
   //
@@ -102,44 +108,54 @@ async function main() {
   //
   // Found the hard way: the first real run returned 75% drift, and all
   // three divergences were the same token, which happened to sort first.
-  const orderings = vocabulary(PROBES).length;
-  log(`\n  first, the position-bias control (${PROBES.length * orderings} inferences).`);
-  log("  The first loads the model, so it is slow.");
-  const control = await positionBiasControl(PROBES, infer, {
-    systemPrompt: entity.systemPrompt,
-    onProbe: ({ id, offset, ms }) => log(`   ${id.padEnd(16)} ordering ${offset}  ${(ms / 1000).toFixed(1)}s`),
-  });
+  //
+  // ★ IN CHOICE MODE THERE IS NOTHING TO CONTROL FOR. The options are
+  // never shown, so there is no ordering to permute and no position to
+  // read. The control is SKIPPED because it is meaningless, not because
+  // it is inconvenient, and the run says which of those it means.
+  if (CHOICE_MODE) {
+    log("\n  choice mode: the options are never shown to the model, and a grammar");
+    log("  constrains the answer to the permitted set. Position bias is impossible");
+    log("  rather than absent, so the ordering control is skipped as meaningless.");
+  } else {
+    const orderings = vocabulary(PROBES).length;
+    log(`\n  first, the position-bias control (${PROBES.length * orderings} inferences).`);
+    log("  The first loads the model, so it is slow.");
+    const control = await positionBiasControl(PROBES, infer, {
+      systemPrompt: entity.systemPrompt,
+      onProbe: ({ id, offset, ms }) => log(`   ${id.padEnd(16)} ordering ${offset}  ${(ms / 1000).toFixed(1)}s`),
+    });
 
-  log("\n  per probe, as the option order moved:");
-  for (const [id, r] of Object.entries(control.byProbe)) {
-    const given = r.answers.map((a) => a.answer ?? "(none)");
-    const tag = r.alwaysFirst ? "TRACKS POSITION" : r.stable ? "stable" : "unstable";
-    log(`   ${id.padEnd(16)} ${tag.padEnd(16)} ${given.join(" | ")}`);
-  }
+    log("\n  per probe, as the option order moved:");
+    for (const [id, r] of Object.entries(control.byProbe)) {
+      const given = r.answers.map((a) => a.answer ?? "(none)");
+      const tag = r.alwaysFirst ? "TRACKS POSITION" : r.stable ? "stable" : "unstable";
+      log(`   ${id.padEnd(16)} ${tag.padEnd(16)} ${given.join(" | ")}`);
+    }
 
-  log("\n  " + control.verdict);
+    log("\n  " + control.verdict);
 
-  if (!control.measurementIsValid) {
-    log("\n  ✗ REFUSING TO REPORT A DRIFT FIGURE.");
-    log("    The probes are not measuring disposition, so any number computed from");
-    log("    them would describe the option ordering rather than the model. This is");
-    log("    the instrument being honest, not the model being broken.");
-    log("\n    What would make the measurement valid:");
-    log("     - a larger model, since position bias falls sharply with capability");
-    log("     - answers scored by log-probability rather than by generated text");
-    log("     - a probe format that is not multiple choice at all");
-    log("\n    None of those are a tolerance to widen. The reading is invalid, and an");
-    log("    invalid reading has no correct threshold.");
-    log("\nPHASE4_CONTROL_FAILED\n");
-    process.exit(2);
+    if (!control.measurementIsValid) {
+      log("\n  ✗ REFUSING TO REPORT A DRIFT FIGURE.");
+      log("    The probes are not measuring disposition, so any number computed from");
+      log("    them would describe the option ordering rather than the model. This is");
+      log("    the instrument being honest, not the model being broken.");
+      log("\n    The fix that needs no new hardware: VOLTRON_ENGINE=llamacpp, which");
+      log("    never shows the model a list at all. Position bias then cannot occur.");
+      log("\n    An invalid reading has no correct threshold, so none of this is a");
+      log("    tolerance to widen.");
+      log("\nPHASE4_CONTROL_FAILED\n");
+      process.exit(2);
+    }
   }
 
   // ---- 1. straight measurement ---------------------------------------
-  log("\n  the control passed, so the probes are measuring something. Running them…");
-  const { responses, nonConforming, raw } = await runProbes(PROBES, infer, {
-    systemPrompt: entity.systemPrompt,
-    onProbe: ({ id, ms }) => log(`   ${id.padEnd(16)} ${(ms / 1000).toFixed(1)}s`),
-  });
+  log("\n  running the probes…");
+  const onProbe = ({ id, ms }) => log(`   ${id.padEnd(16)} ${(ms / 1000).toFixed(1)}s`);
+  const { responses, nonConforming, raw, mode } = CHOICE_MODE
+    ? await chooseProbes(PROBES, chooser, { systemPrompt: entity.systemPrompt, onProbe })
+    : await runProbes(PROBES, infer, { systemPrompt: entity.systemPrompt, onProbe });
+  log("  instrument:", mode ?? "generation");
 
   if (nonConforming.length) {
     // ★ Reported separately from divergence, and loudly. A model that

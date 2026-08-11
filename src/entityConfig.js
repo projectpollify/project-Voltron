@@ -44,6 +44,16 @@ const num = (v, fallback) => (v === undefined ? fallback : Number(v));
  * runtime pin will immediately refuse until an amendment records it.
  * That friction is correct: swapping the thing that thinks should cost a
  * quorum, not an export line.
+ *
+ * ★ THREE ENGINES, AND THE THIRD IS NOT A VARIANT OF THE SECOND.
+ *   stub      nothing runs; the brain organ is a prompt nobody executes
+ *   ollama    the model TYPES an answer chosen from a list in the prompt
+ *   llamacpp  the model CHOOSES from a set it is never shown, under a
+ *             grammar. Position bias is impossible rather than absent.
+ *
+ * They are different instruments, not different vendors, and the engine
+ * name is inside the runtime pin so a result can always be traced to the
+ * one that produced it.
  */
 export const RUNTIME_CONFIG = {
   engine: process.env.VOLTRON_ENGINE ?? "stub",

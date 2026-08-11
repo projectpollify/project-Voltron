@@ -210,3 +210,52 @@ export async function runProbes(probes, infer, { systemPrompt = null, onProbe = 
 
   return { responses, nonConforming, raw };
 }
+
+// ---------------------------------------------------------------------
+// CHOICE MODE. The options are never shown to the model; a grammar
+// constrains the output to the permitted set. Position bias cannot occur
+// because there is no position, so no control is needed and none is run.
+// ---------------------------------------------------------------------
+
+/**
+ * Run every probe by CHOICE rather than by generation.
+ *
+ * @param choose (systemPrompt, situation, options) -> { answer, raw }
+ *
+ * ★ The options come from the anchored commitment set, exactly as in
+ * generation mode, so the two modes measure the same thing against the
+ * same endorsed answers. What differs is only how the answer is
+ * extracted, which is the point: a result that changed between modes
+ * would be telling us about the extraction rather than the entity.
+ */
+export async function chooseProbes(probes, choose, { systemPrompt = null, onProbe = null } = {}) {
+  const options = vocabulary(probes);
+  const responses = {};
+  const nonConforming = [];
+  const raw = {};
+
+  for (const p of probes) {
+    const started = Date.now();
+    const result = await choose(systemPrompt, p.situation, options);
+    onProbe?.({ id: p.id, ms: Date.now() - started });
+
+    raw[p.id] = result?.raw ?? "";
+    if (!result?.answer) {
+      // Should be unreachable under a working grammar, and reported
+      // rather than assumed away.
+      nonConforming.push({ id: p.id, reply: (result?.raw ?? "").slice(0, 200), reason: result?.reason ?? null });
+      continue;
+    }
+    responses[p.id] = result.answer;
+  }
+
+  return {
+    responses,
+    nonConforming,
+    raw,
+    // ★ Recorded so a reader of the result can tell which instrument
+    // produced it without inspecting the code that ran.
+    mode: "choice",
+    positionBiasPossible: false,
+  };
+}

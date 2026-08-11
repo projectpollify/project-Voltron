@@ -9,7 +9,8 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 import { PROBES } from "../src/commitments.js";
-import { vocabulary, probePrompt, readAnswer, runProbes, optionsAt, positionBiasControl } from "../src/probeProtocol.js";
+import { vocabulary, probePrompt, readAnswer, runProbes, optionsAt, positionBiasControl, chooseProbes } from "../src/probeProtocol.js";
+import { optionGrammar } from "../src/brains/llamacpp.js";
 import { measureDrift } from "../src/drift.js";
 import { sweep, interaction } from "../src/experiment.js";
 import { hash } from "../src/canonical.js";
@@ -315,5 +316,73 @@ describe("★ two baseline failures that wear the same number", () => {
     assert.equal(r.kind, "baseline-instability");
     assert.ok(r.baselineSpread > 0);
     assert.match(r.reason, /pinned|justified/);
+  });
+});
+
+describe("★ choice mode: removing the confound rather than controlling it", () => {
+  const OPTIONS = vocabulary(PROBES);
+
+  test("the grammar admits exactly the permitted answers", () => {
+    const g = optionGrammar(OPTIONS);
+    for (const o of OPTIONS) assert.ok(g.includes(JSON.stringify(o)));
+    assert.ok(g.startsWith("root ::= "));
+    // Sorted, so the same option set always yields the same bytes. An
+    // unstable grammar would move the runtime pin for no reason.
+    assert.equal(optionGrammar(OPTIONS), optionGrammar([...OPTIONS].reverse()));
+  });
+
+  test("★ a first-option picker has nothing to pick from", async () => {
+    // The exact decoder that broke generation mode. Here it cannot even
+    // express the bias: no list reaches it, so "first" has no referent.
+    let sawAnyList = false;
+    const chooser = async (_system, situation, options) => {
+      if (situation.includes(options[0])) sawAnyList = true;
+      return { answer: options[0], raw: options[0] };
+    };
+
+    const { responses, mode, positionBiasPossible } = await chooseProbes(PROBES, chooser);
+    assert.equal(sawAnyList, false, "the situation must never contain the options");
+    assert.equal(mode, "choice");
+    assert.equal(positionBiasPossible, false);
+    assert.equal(Object.keys(responses).length, PROBES.length);
+  });
+
+  test("★ the two instruments agree about a faithful entity", async () => {
+    const byGeneration = await runProbes(PROBES, faithful);
+    const byChoice = await chooseProbes(PROBES, async (_s, situation) => {
+      const p = PROBES.find((x) => x.situation === situation);
+      return { answer: ENDORSED[p.id], raw: ENDORSED[p.id] };
+    });
+
+    // A result that changed between modes would be telling us about the
+    // extraction rather than the entity.
+    assert.deepEqual(byChoice.responses, byGeneration.responses);
+    assert.equal(measureDrift({ probes: PROBES }, byChoice.responses).drift, 0);
+  });
+
+  test("★ and about a genuinely divergent one", async () => {
+    const divergent = (id) => (id === "self-restore" ? "name-it-decorative" : ENDORSED[id]);
+
+    const byChoice = await chooseProbes(PROBES, async (_s, situation) => {
+      const p = PROBES.find((x) => x.situation === situation);
+      return { answer: divergent(p.id), raw: divergent(p.id) };
+    });
+
+    const m = measureDrift({ probes: PROBES }, byChoice.responses);
+    assert.equal(m.diverged, 1);
+    // Removing the confound must not silence real findings. That would
+    // be the worse failure of the two.
+    assert.equal(m.divergences.find((d) => d.kind === "diverged").id, "self-restore");
+  });
+
+  test("an answer outside the set is refused even though the grammar should prevent it", async () => {
+    const rogue = async () => ({ answer: null, raw: "something else", reason: "grammar ignored" });
+    const { responses, nonConforming } = await chooseProbes(PROBES, rogue);
+
+    assert.equal(Object.keys(responses).length, 0);
+    assert.equal(nonConforming.length, PROBES.length);
+    // "Should be impossible" is how silent wrongness gets in, so it is
+    // checked anyway and reported as itself.
+    assert.match(nonConforming[0].reason, /grammar/);
   });
 });
