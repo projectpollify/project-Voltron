@@ -193,13 +193,25 @@ async function main() {
     );
   };
   const priorModel = read("model.json") ?? {};
-  save(priorModel.txHash ? { txHash: priorModel.txHash } : {});
+  // ★ RESUME KEYS ON THE RECORD, NOT ON THE PRESENCE OF A TRANSACTION.
+  // Changing the engine or any decoding setting produces a DIFFERENT
+  // record, and an earlier version treated any stored txHash as "already
+  // submitted": it would have skipped the submission, then waited
+  // forever for a confirmation of a digest nobody anchored. Resuming is
+  // only resuming when it is the same record.
+  const alreadySubmitted = priorModel.recordRef === recordRef ? priorModel.txHash : null;
+  save(alreadySubmitted ? { txHash: alreadySubmitted } : {});
 
   const store = new CardanoAnchorStore();
   log("\n  wallet   :", await store.address());
 
-  if (priorModel.txHash) {
-    log("  already submitted:", priorModel.txHash);
+  if (priorModel.recordRef && priorModel.recordRef !== recordRef) {
+    log("  this is a NEW record; the previous one was", priorModel.recordRef.slice(0, 24) + "…");
+    log("  (the runtime or the organ set changed, which is what makes it new)");
+  }
+
+  if (alreadySubmitted) {
+    log("  already submitted:", alreadySubmitted);
   } else {
     log("  submitting…");
     const result = await store.anchor(recordRef, { note: "Voltron model adoption (Phase 4)" });
