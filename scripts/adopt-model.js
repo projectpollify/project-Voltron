@@ -32,6 +32,7 @@ import { measureRuntime } from "../src/runtime.js";
 import { buildOrgans } from "../src/artefacts.js";
 import { RUNTIME_CONFIG, ORGAN_PATHS } from "../src/entityConfig.js";
 import { checkOllama } from "../src/brains/ollama.js";
+import { checkLlamaCpp } from "../src/brains/llamacpp.js";
 import { COMMITMENT_VALUES, COMMITMENT_CONSTRAINTS, PROBES } from "../src/commitments.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -58,14 +59,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Checked BEFORE anything is anchored. Pinning a model that cannot be
-  // run would put a permanent claim on chain that the next step refutes.
-  const health = await checkOllama({ model: RUNTIME_CONFIG.model });
+  // Checked BEFORE anything is anchored, and against the engine actually
+  // named. Pinning a model that cannot be run would put a permanent
+  // claim on chain that the next step refutes, and checking the wrong
+  // server would let that happen while looking careful.
+  const health =
+    RUNTIME_CONFIG.engine === "llamacpp"
+      ? await checkLlamaCpp()
+      : await checkOllama({ model: RUNTIME_CONFIG.model });
   if (!health.ok) {
     log("  " + health.reason + "\n");
     process.exit(1);
   }
-  log("  ollama   : running, model present");
+  log(`  ${RUNTIME_CONFIG.engine.padEnd(8)} : running, ready`);
 
   const state = read("genesis.json");
   const organState = read("organs.json");
@@ -149,7 +155,12 @@ async function main() {
   });
   const commitmentsRef = lineage.commitments.put(set);
 
-  const at = pinned.modelAt ?? Math.floor(Date.now() / 1000);
+  // ★ Read from the file this script WRITES, not from Phase 3's. An
+  // earlier version read `pinned.modelAt`, which never exists, so every
+  // re-run picked a new timestamp, produced a different digest, and
+  // silently abandoned the record it had already submitted.
+  const priorRun = read("model.json") ?? {};
+  const at = priorRun.modelAt ?? Math.floor(Date.now() / 1000);
   lineage.memory.append(
     {
       event: "commitment-amendment",
@@ -192,7 +203,7 @@ async function main() {
       )
     );
   };
-  const priorModel = read("model.json") ?? {};
+  const priorModel = priorRun;
   // ★ RESUME KEYS ON THE RECORD, NOT ON THE PRESENCE OF A TRANSACTION.
   // Changing the engine or any decoding setting produces a DIFFERENT
   // record, and an earlier version treated any stored txHash as "already
