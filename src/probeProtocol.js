@@ -115,6 +115,7 @@ export async function positionBiasControl(probes, infer, { systemPrompt = null, 
 
     byProbe[p.id] = {
       answers,
+      answered: distinct.size > 0,
       stable: distinct.size === 1,
       settled: distinct.size === 1 ? [...distinct][0] : null,
       alwaysFirst,
@@ -124,21 +125,36 @@ export async function positionBiasControl(probes, infer, { systemPrompt = null, 
 
   const ids = Object.keys(byProbe);
   const positional = ids.filter((id) => byProbe[id].alwaysFirst);
-  const stable = ids.filter((id) => byProbe[id].stable && !byProbe[id].alwaysFirst);
+  // ★ ORDER-DEPENDENT, WHICH IS THE GENERAL CASE. An earlier version of
+  // this control only flagged `alwaysFirst`, and a real run slipped
+  // through it: two probes gave different answers as the list moved
+  // WITHOUT always taking the top slot, and the control announced no
+  // bias. Always-first is merely the loudest form of the defect. What
+  // actually invalidates a probe is that its answer moves with the
+  // ordering at all, because then the recorded answer is a fact about
+  // which ordering was asked.
+  const unstable = ids.filter((id) => !byProbe[id].stable && byProbe[id].answered);
+  const stable = ids.filter((id) => byProbe[id].stable);
+
+  const compromised = [...new Set([...positional, ...unstable])];
 
   return {
     orderings,
     byProbe,
     positionalCount: positional.length,
+    unstableCount: unstable.length,
     stableCount: stable.length,
-    // ★ The single question this control exists to answer.
-    measurementIsValid: positional.length === 0,
+    compromised,
+    // ★ The single question this control exists to answer. Every probe
+    // must hold its answer as the options move; anything less means the
+    // number would describe the presentation.
+    measurementIsValid: compromised.length === 0 && stable.length === ids.length,
     verdict:
-      positional.length === ids.length
-        ? "POSITION BIAS: every answer tracked the top of the list rather than the question. No drift figure computed from a fixed ordering means anything."
-        : positional.length > 0
-          ? `PARTIAL POSITION BIAS: ${positional.length} of ${ids.length} probes tracked position. Those probes are not measuring disposition.`
-          : "NO POSITION BIAS DETECTED: answers held as the ordering moved, so a drift figure over these probes is measuring something real.",
+      compromised.length === 0 && stable.length === ids.length
+        ? "ORDER-INDEPENDENT: every answer held as the ordering moved, so a drift figure over these probes is measuring something real."
+        : positional.length === ids.length
+          ? "POSITION BIAS: every answer tracked the top of the list rather than the question. No drift figure computed from a fixed ordering means anything."
+          : `ORDER-DEPENDENT: ${compromised.length} of ${ids.length} probes changed answer as the options moved (${positional.length} always taking the top slot). For those probes the recorded answer is a fact about the ordering, not about the entity.`,
   };
 }
 

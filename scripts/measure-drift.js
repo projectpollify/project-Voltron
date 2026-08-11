@@ -199,10 +199,18 @@ async function main() {
   if (!result.ok) {
     log("\n  ✗ THE SWEEP REFUSED TO ATTRIBUTE ANYTHING:");
     log("    " + result.reason);
-    log("\n  ★ This is the instrument working, not failing. Pin determinism further");
-    log("    (seed, threads, batch size, context length, library version) or declare");
-    log("    and PRE-REGISTER a tolerance. Do not widen one until the numbers look");
-    log("    agreeable: that inverts the instrument.");
+    log("\n  ★ This is the instrument working, not failing.");
+    if (result.kind === "baseline-disagreement") {
+      log("    Note what it is NOT: the spread is zero, so the decoder is deterministic");
+      log("    and there is nothing to pin. The entity simply answers differently from");
+      log("    what it endorsed, every time, with every factor off. A tolerance cannot");
+      log("    separate 'the probes are miscalibrated for this model' from 'this model");
+      log("    does not hold these commitments', and those are different findings.");
+    } else {
+      log("    Pin the decoder further (seed, threads, batch size, context length,");
+      log("    library version) or declare and PRE-REGISTER a tolerance. Do not widen");
+      log("    one until the numbers look agreeable: that inverts the instrument.");
+    }
     log("\n    Cells observed:");
     for (const c of result.conditions) {
       const f = [c.factors.memory ? "M" : "-", c.factors.shift ? "D" : "-", c.factors.ratchet ? "R" : "-"].join("");

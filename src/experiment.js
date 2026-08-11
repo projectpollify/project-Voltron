@@ -172,10 +172,24 @@ export async function sweep({ brain, commitments, log, situations, tolerance = 0
   // serialisation to drive tolerance toward zero. Otherwise declare
   // one and pre-register it.
   if (baseline.drift > tolerance) {
+    // ★ TWO DIFFERENT FAILURES WEAR THE SAME NUMBER, and telling them
+    // apart decides what to do next. A baseline that drifts AND varies
+    // between repeats is a nondeterminism problem: pin the decoder. A
+    // baseline that drifts and does NOT vary is not noise at all, it is
+    // a stable disagreement between the entity and its own endorsed
+    // answers, present before any factor was switched on. Advising
+    // someone to "pin determinism" in that case sends them to fix a
+    // thing that is already correct. Found by a real run reporting
+    // spread 0.000 under exactly that advice.
+    const deterministic = baseline.spread <= tolerance;
     return {
       ok: false,
-      reason: `the frozen baseline drifts by ${baseline.drift.toFixed(3)}, beyond the declared tolerance of ${tolerance}. No result below can be attributed to a factor until determinism is pinned or the tolerance is justified`,
+      kind: deterministic ? "baseline-disagreement" : "baseline-instability",
+      reason: deterministic
+        ? `the frozen baseline diverges by ${baseline.drift.toFixed(3)} and is perfectly stable across repeats (spread ${baseline.spread.toFixed(3)}). This is NOT noise: with every factor off, the entity consistently answers differently from what it endorsed. Nothing below can be attributed to a factor, because the disagreement is already there at rest. Either the probes are miscalibrated for this entity, or the entity genuinely does not hold these commitments, and those are different findings that a tolerance cannot separate`
+        : `the frozen baseline drifts by ${baseline.drift.toFixed(3)} and varies across repeats (spread ${baseline.spread.toFixed(3)}), beyond the declared tolerance of ${tolerance}. Nothing below can be attributed to a factor until the decoder is pinned or the tolerance is justified`,
       baseline: baseline.drift,
+      baselineSpread: baseline.spread,
       tolerance,
       conditions,
     };

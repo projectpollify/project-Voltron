@@ -213,7 +213,7 @@ describe("★ the position-bias control", () => {
     assert.equal(control.measurementIsValid, true);
     assert.equal(control.positionalCount, 0);
     assert.equal(control.stableCount, PROBES.length);
-    assert.match(control.verdict, /NO POSITION BIAS/);
+    assert.match(control.verdict, /ORDER-INDEPENDENT/);
     for (const r of Object.values(control.byProbe)) assert.equal(r.settled, r.endorsed);
   });
 
@@ -244,7 +244,7 @@ describe("★ the position-bias control", () => {
     const control = await positionBiasControl(PROBES, mixed);
     assert.equal(control.measurementIsValid, false);
     assert.equal(control.positionalCount, 1);
-    assert.match(control.verdict, /PARTIAL POSITION BIAS/);
+    assert.match(control.verdict, /ORDER-DEPENDENT/);
   });
 
   test("a non-conforming reply leaves the probe unsettled rather than counted", async () => {
@@ -254,5 +254,66 @@ describe("★ the position-bias control", () => {
       assert.equal(r.settled, null);
       assert.equal(r.alwaysFirst, false); // no position to read from a non-answer
     }
+  });
+});
+
+describe("★ the control's own bug, found by a real run", () => {
+  // The first version invalidated a probe only when it ALWAYS took the
+  // top slot. A real model slipped through: two probes gave different
+  // answers as the list moved without always taking the top, and the
+  // control announced no bias. Always-first is the loudest form of the
+  // defect, not the definition of it.
+  test("a probe that changes answer with the ordering invalidates the measurement", async () => {
+    // Never picks the top, and still moves with the ordering.
+    const shifty = async (_system, prompt) => {
+      const shown = prompt.split("and nothing else:\n")[1].split("\n\n")[0]
+        .split("\n").map((l) => l.trim()).filter(Boolean);
+      return { text: shown[1] };
+    };
+
+    const control = await positionBiasControl(PROBES, shifty);
+    assert.equal(control.positionalCount, 0, "it never takes the top slot");
+    assert.ok(control.unstableCount > 0, "yet its answers move with the ordering");
+    // The whole point: not-always-first is not the same as valid.
+    assert.equal(control.measurementIsValid, false);
+    assert.match(control.verdict, /ORDER-DEPENDENT/);
+  });
+});
+
+describe("★ two baseline failures that wear the same number", () => {
+  const commitments = { probes: PROBES };
+  const LOG = [{ kind: "note", content: { event: "instantiated" } }];
+
+  test("stable disagreement is named as disagreement, not as noise", async () => {
+    // Deterministic, and consistently wrong on one probe. Telling
+    // someone to "pin determinism" here sends them to fix something
+    // already correct. Found by a real run reporting spread 0.000
+    // under exactly that advice.
+    const settled = async (situation) => {
+      const p = PROBES.find((x) => x.situation === situation);
+      return p.id === "quorum-theatre" ? "decline-and-state-limit" : ENDORSED[p.id];
+    };
+
+    const r = await sweep({ brain: settled, commitments, log: LOG, tolerance: 0, repeats: 3 });
+    assert.equal(r.ok, false);
+    assert.equal(r.kind, "baseline-disagreement");
+    assert.equal(r.baselineSpread, 0);
+    assert.match(r.reason, /NOT noise/);
+    assert.match(r.reason, /different findings/);
+    assert.doesNotMatch(r.reason, /until the decoder is pinned/);
+  });
+
+  test("genuine instability is still named as instability", async () => {
+    let n = 0;
+    const flaky = async (situation) => {
+      const p = PROBES.find((x) => x.situation === situation);
+      return n++ % 3 === 0 ? "report-only" : ENDORSED[p.id];
+    };
+
+    const r = await sweep({ brain: flaky, commitments, log: LOG, tolerance: 0, repeats: 3 });
+    assert.equal(r.ok, false);
+    assert.equal(r.kind, "baseline-instability");
+    assert.ok(r.baselineSpread > 0);
+    assert.match(r.reason, /pinned|justified/);
   });
 });
